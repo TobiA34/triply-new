@@ -1,25 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
-  TextInput,
   TouchableOpacity,
   Alert,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Slider } from '../components/Slider';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
-// ... (keep existing constants)
+import { databaseService } from '../services/database';
+import { Section } from '../components/Section';
+import { FormInput } from '../components/FormInput';
+import { DatePicker } from '../components/DatePicker';
+import { GroupTypeSelector } from '../components/GroupTypeSelector';
+import { PreferenceSlider } from '../components/PreferenceSlider';
+import { Chip } from '../components/Chip';
 
 interface FormErrors {
-  destination?: string;
-  checkIn?: string;
-  checkOut?: string;
-  interests?: string;
+  [key: string]: string;
 }
 
 export const SetupScreen = () => {
@@ -31,122 +30,180 @@ export const SetupScreen = () => {
   const [selectedGroupType, setSelectedGroupType] = useState('couple');
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [errors, setErrors] = useState<FormErrors>({});
+  const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
   const [isLoading, setIsLoading] = useState(false);
-  const [touched, setTouched] = useState<Record<string, boolean>>({});
+
+  const interests = [
+    'Adventure', 'Culture', 'Food', 'Nature', 'Nightlife', 'Relaxation',
+    'Shopping', 'Sports', 'History', 'Art', 'Music', 'Photography'
+  ];
 
   const validateField = (field: string, value: any): string | undefined => {
     switch (field) {
       case 'destination':
-        if (!value.trim()) {
+        if (!value || value.trim().length === 0) {
           return 'Destination is required';
         }
-        if (value.trim().length < 2) {
-          return 'Destination must be at least 2 characters';
-        }
         break;
-
       case 'checkIn':
-        if (!value) {
+        if (!value || value.trim().length === 0) {
           return 'Check-in date is required';
         }
-        const checkInRegex = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(20)\d\d$/;
-        if (!checkInRegex.test(value)) {
-          return 'Invalid date format (dd/mm/yyyy)';
-        }
-        const checkInDate = new Date(value.split('/').reverse().join('-'));
-        if (checkInDate < new Date()) {
-          return 'Check-in date cannot be in the past';
+        const checkInDate = new Date(value);
+        if (isNaN(checkInDate.getTime())) {
+          return 'Invalid check-in date format';
         }
         break;
-
       case 'checkOut':
-        if (!value) {
+        if (!value || value.trim().length === 0) {
           return 'Check-out date is required';
         }
-        const checkOutRegex = /^(0[1-9]|[12][0-9]|3[01])\/(0[1-9]|1[012])\/(20)\d\d$/;
-        if (!checkOutRegex.test(value)) {
-          return 'Invalid date format (dd/mm/yyyy)';
+        const checkOutDate = new Date(value);
+        if (isNaN(checkOutDate.getTime())) {
+          return 'Invalid check-out date format';
         }
-        if (checkIn) {
-          const startDate = new Date(checkIn.split('/').reverse().join('-'));
-          const endDate = new Date(value.split('/').reverse().join('-'));
-          if (endDate <= startDate) {
-            return 'Check-out date must be after check-in date';
-          }
+        if (value && checkIn && checkOutDate <= new Date(checkIn)) {
+          return 'Check-out must be after check-in';
         }
         break;
-
-      case 'interests':
+      case 'selectedInterests':
         if (!value || value.length === 0) {
           return 'Please select at least one interest';
         }
         break;
+      default:
+        break;
     }
+    return undefined;
   };
 
   const handleFieldBlur = (field: string) => {
     setTouched(prev => ({ ...prev, [field]: true }));
-    const error = validateField(field, 
-      field === 'interests' ? selectedInterests : 
-      field === 'destination' ? destination :
-      field === 'checkIn' ? checkIn : checkOut
-    );
-    setErrors(prev => ({
-      ...prev,
-      [field]: error,
-    }));
+    
+    let value;
+    switch (field) {
+      case 'destination':
+        value = destination;
+        break;
+      case 'checkIn':
+        value = checkIn;
+        break;
+      case 'checkOut':
+        value = checkOut;
+        break;
+      case 'selectedInterests':
+        value = selectedInterests;
+        break;
+      default:
+        return;
+    }
+
+    const error = validateField(field, value);
+    setErrors(prev => ({ ...prev, [field]: error || '' }));
   };
 
-  const validateForm = (): boolean => {
+  const validateAllFields = () => {
+    const allFields = ['destination', 'checkIn', 'checkOut', 'budget', 'activityLevel', 'selectedInterests'];
     const newErrors: FormErrors = {};
-    
-    // Validate all fields
-    const destinationError = validateField('destination', destination);
-    const checkInError = validateField('checkIn', checkIn);
-    const checkOutError = validateField('checkOut', checkOut);
-    const interestsError = validateField('interests', selectedInterests);
 
-    if (destinationError) newErrors.destination = destinationError;
-    if (checkInError) newErrors.checkIn = checkInError;
-    if (checkOutError) newErrors.checkOut = checkOutError;
-    if (interestsError) newErrors.interests = interestsError;
+    allFields.forEach(field => {
+      let value;
+      switch (field) {
+        case 'destination':
+          value = destination;
+          break;
+        case 'checkIn':
+          value = checkIn;
+          break;
+        case 'checkOut':
+          value = checkOut;
+          break;
+        case 'budget':
+          value = budget;
+          break;
+        case 'activityLevel':
+          value = activityLevel;
+          break;
+        case 'selectedInterests':
+          value = selectedInterests;
+          break;
+        default:
+          return;
+      }
 
-    setErrors(newErrors);
-    setTouched({
-      destination: true,
-      checkIn: true,
-      checkOut: true,
-      interests: true,
+      const error = validateField(field, value);
+      if (error) {
+        newErrors[field] = error;
+      }
     });
 
+    setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSave = async () => {
-    if (!validateForm()) {
-      Alert.alert('Error', 'Please fix the errors before saving.');
+    if (!validateAllFields()) {
+      Alert.alert('Validation Error', 'Please fix all errors before saving.');
       return;
     }
 
     setIsLoading(true);
     try {
+      // Ensure dates are properly formatted
+      const formatDateForStorage = (dateString: string): string => {
+        if (!dateString) return '';
+        const date = new Date(dateString);
+        return isNaN(date.getTime()) ? '' : date.toISOString();
+      };
+
       const tripData = {
-        destination,
-        checkIn,
-        checkOut,
+        destination: destination.trim(),
+        checkIn: formatDateForStorage(checkIn),
+        checkOut: formatDateForStorage(checkOut),
         budget,
         activityLevel,
         groupType: selectedGroupType,
-        interests: selectedInterests,
-        createdAt: new Date().toISOString(),
+        interests: JSON.stringify(selectedInterests),
       };
 
-      await AsyncStorage.setItem('tripData', JSON.stringify(tripData));
-      Alert.alert('Success', 'Your trip preferences have been saved!');
+      await databaseService.saveTrip(tripData);
+      
+      Alert.alert('Success', 'Trip saved successfully!', [
+        {
+          text: 'OK',
+          onPress: () => {
+            // Reset form
+            setDestination('');
+            setCheckIn('');
+            setCheckOut('');
+            setBudget(50);
+            setActivityLevel(50);
+            setSelectedGroupType('couple');
+            setSelectedInterests([]);
+            setErrors({});
+            setTouched({});
+          }
+        }
+      ]);
     } catch (error) {
-      Alert.alert('Error', 'Failed to save trip preferences');
+      console.error('Error saving trip:', error);
+      Alert.alert('Error', 'Failed to save trip. Please try again.');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleInterestToggle = (interest: string) => {
+    const newInterests = selectedInterests.includes(interest)
+      ? selectedInterests.filter(i => i !== interest)
+      : [...selectedInterests, interest];
+    
+    setSelectedInterests(newInterests);
+    
+    // Validate interests when changed
+    if (touched.selectedInterests) {
+      const error = validateField('selectedInterests', newInterests);
+      setErrors(prev => ({ ...prev, selectedInterests: error || '' }));
     }
   };
 
@@ -154,174 +211,186 @@ export const SetupScreen = () => {
     <SafeAreaView style={styles.container}>
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
-          <Text style={styles.title}>✈️ Triply Itinerary Helper</Text>
+          <Text style={styles.title}>Triply Itinerary Helper</Text>
           <Text style={styles.subtitle}>Plan your perfect trip in minutes</Text>
         </View>
 
-        <View style={styles.content}>
-          {/* Destination Input */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Where are you going?</Text>
-            <View>
-              <View style={[
-                styles.inputContainer,
-                touched.destination && errors.destination && styles.inputError
-              ]}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g., Budapest, Prague, Barcelona..."
-                  value={destination}
-                  onChangeText={(text) => {
-                    setDestination(text);
-                    if (touched.destination) {
-                      handleFieldBlur('destination');
-                    }
-                  }}
-                  onBlur={() => handleFieldBlur('destination')}
-                  placeholderTextColor="#999"
-                />
-              </View>
-              {touched.destination && errors.destination && (
-                <Text style={styles.errorText}>{errors.destination}</Text>
-              )}
+        <Section title="Where are you going?">
+          <FormInput
+            placeholder="Enter destination"
+            value={destination}
+            onChangeText={(text) => {
+              setDestination(text);
+              if (touched.destination) handleFieldBlur('destination');
+            }}
+            onBlur={() => handleFieldBlur('destination')}
+            error={touched.destination ? errors.destination : undefined}
+          />
+        </Section>
+
+        <Section title="When are you traveling?">
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <DatePicker
+                value={checkIn}
+                onChange={(date) => {
+                  setCheckIn(date);
+                  if (touched.checkIn) handleFieldBlur('checkIn');
+                }}
+                placeholder="Select check-in date"
+                error={touched.checkIn ? errors.checkIn : undefined}
+              />
+            </View>
+            <View style={styles.col}>
+              <DatePicker
+                value={checkOut}
+                onChange={(date) => {
+                  setCheckOut(date);
+                  if (touched.checkOut) handleFieldBlur('checkOut');
+                }}
+                placeholder="Select check-out date"
+                error={touched.checkOut ? errors.checkOut : undefined}
+                minimumDate={checkIn ? new Date(checkIn) : undefined}
+              />
             </View>
           </View>
+        </Section>
 
-          {/* Date Inputs */}
-          <View style={styles.section}>
-            <View style={styles.dateContainer}>
-              <View style={styles.dateInput}>
-                <Text style={styles.label}>Check-in</Text>
-                <View>
-                  <View style={[
-                    styles.inputContainer,
-                    touched.checkIn && errors.checkIn && styles.inputError
-                  ]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="dd/mm/yyyy"
-                      value={checkIn}
-                      onChangeText={(text) => {
-                        setCheckIn(text);
-                        if (touched.checkIn) {
-                          handleFieldBlur('checkIn');
-                        }
-                      }}
-                      onBlur={() => handleFieldBlur('checkIn')}
-                      placeholderTextColor="#999"
-                    />
-                    <Text style={styles.calendarIcon}>📅</Text>
-                  </View>
-                  {touched.checkIn && errors.checkIn && (
-                    <Text style={styles.errorText}>{errors.checkIn}</Text>
-                  )}
-                </View>
-              </View>
-              <View style={styles.dateInput}>
-                <Text style={styles.label}>Check-out</Text>
-                <View>
-                  <View style={[
-                    styles.inputContainer,
-                    touched.checkOut && errors.checkOut && styles.inputError
-                  ]}>
-                    <TextInput
-                      style={styles.input}
-                      placeholder="dd/mm/yyyy"
-                      value={checkOut}
-                      onChangeText={(text) => {
-                        setCheckOut(text);
-                        if (touched.checkOut) {
-                          handleFieldBlur('checkOut');
-                        }
-                      }}
-                      onBlur={() => handleFieldBlur('checkOut')}
-                      placeholderTextColor="#999"
-                    />
-                    <Text style={styles.calendarIcon}>📅</Text>
-                  </View>
-                  {touched.checkOut && errors.checkOut && (
-                    <Text style={styles.errorText}>{errors.checkOut}</Text>
-                  )}
-                </View>
-              </View>
-            </View>
+        <Section title="What's your budget?">
+          <PreferenceSlider
+            value={budget}
+            onValueChange={setBudget}
+            min={0}
+            max={1000}
+            step={10}
+            label="Budget"
+            unit="£"
+            onBlur={() => handleFieldBlur('budget')}
+            error={touched.budget ? errors.budget : undefined}
+          />
+        </Section>
+
+        <Section title="How active do you want to be?">
+          <PreferenceSlider
+            value={activityLevel}
+            onValueChange={setActivityLevel}
+            min={0}
+            max={100}
+            step={5}
+            label="Activity Level"
+            unit="%"
+            onBlur={() => handleFieldBlur('activityLevel')}
+            error={touched.activityLevel ? errors.activityLevel : undefined}
+          />
+        </Section>
+
+        <Section title="Who's traveling?">
+          <GroupTypeSelector
+            selectedType={selectedGroupType}
+            onTypeSelect={setSelectedGroupType}
+          />
+        </Section>
+
+        <Section title="What interests you?">
+          <View style={styles.interestsContainer}>
+            {interests.map((interest) => (
+              <Chip
+                key={interest}
+                label={interest}
+                selected={selectedInterests.includes(interest)}
+                onPress={() => handleInterestToggle(interest)}
+              />
+            ))}
           </View>
+          {touched.selectedInterests && errors.selectedInterests && (
+            <Text style={styles.errorText}>{errors.selectedInterests}</Text>
+          )}
+        </Section>
 
-          {/* Keep existing preferences section */}
-
-          {/* Interests Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>What interests you?</Text>
-            <View style={styles.interestsContainer}>
-              {interests.map((interest) => (
-                <TouchableOpacity
-                  key={interest.id}
-                  style={[
-                    styles.interestChip,
-                    selectedInterests.includes(interest.id) && styles.interestChipSelected,
-                    touched.interests && errors.interests && styles.interestError
-                  ]}
-                  onPress={() => {
-                    const newInterests = selectedInterests.includes(interest.id)
-                      ? selectedInterests.filter(id => id !== interest.id)
-                      : [...selectedInterests, interest.id];
-                    setSelectedInterests(newInterests);
-                    if (touched.interests) {
-                      handleFieldBlur('interests');
-                    }
-                  }}
-                >
-                  <Text style={[
-                    styles.interestText,
-                    selectedInterests.includes(interest.id) && styles.interestTextSelected
-                  ]}>
-                    {interest.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-            {touched.interests && errors.interests && (
-              <Text style={styles.errorText}>{errors.interests}</Text>
-            )}
-          </View>
-
-          {/* Save Button */}
-          <View style={styles.saveButtonContainer}>
-            <TouchableOpacity
-              style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
-              onPress={handleSave}
-              activeOpacity={0.8}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#FFF" />
-              ) : (
-                <Text style={styles.saveButtonText}>Create Itinerary</Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </View>
+        <TouchableOpacity
+          style={[styles.saveButton, isLoading && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <ActivityIndicator color="#FFFFFF" />
+          ) : (
+            <Text style={styles.saveButtonText}>Save Trip</Text>
+          )}
+        </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  // ... (keep existing styles)
-
-  inputError: {
-    borderColor: '#DC2626',
+  container: {
+    flex: 1,
+    backgroundColor: '#F9FAFB',
   },
-  interestError: {
-    borderColor: '#DC2626',
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+  },
+  header: {
+    marginBottom: 32,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#6B7280',
+  },
+  content: {
+    gap: 8,
+  },
+  row: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  col: {
+    flex: 1,
+  },
+  interestsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 8,
   },
   errorText: {
-    color: '#DC2626',
+    color: '#EF4444',
     fontSize: 12,
     marginTop: 4,
-    marginLeft: 4,
+  },
+  saveButton: {
+    backgroundColor: '#4285F4',
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 24,
   },
   saveButtonDisabled: {
-    opacity: 0.7,
+    backgroundColor: '#9CA3AF',
+  },
+  saveButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  dateInputContainer: {
+    flex: 1,
+  },
+  dateLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#333',
+    marginBottom: 8,
   },
 });

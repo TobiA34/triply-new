@@ -10,19 +10,27 @@ import {
 } from 'react-native';
 
 interface PreferenceSliderProps {
-  icon: string;
   label: string;
   value: number;
   onValueChange: (value: number) => void;
-  valueLabel: string;
+  min?: number;
+  max?: number;
+  step?: number;
+  unit?: string;
+  onBlur?: () => void;
+  error?: string;
 }
 
 export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
-  icon,
   label,
   value,
   onValueChange,
-  valueLabel,
+  min = 0,
+  max = 100,
+  step = 1,
+  unit = '',
+  onBlur,
+  error,
 }) => {
   const [sliderLayout, setSliderLayout] = React.useState<LayoutRectangle | null>(null);
   const panValue = useRef(new Animated.Value(0)).current;
@@ -30,11 +38,12 @@ export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
 
   React.useEffect(() => {
     if (sliderLayout) {
-      const newPosition = (value / 100) * sliderLayout.width;
+      const percentage = ((value - min) / (max - min)) * 100;
+      const newPosition = (percentage / 100) * sliderLayout.width;
       panValue.setValue(newPosition);
       lastOffset.current = newPosition;
     }
-  }, [value, sliderLayout]);
+  }, [value, sliderLayout, min, max]);
 
   const panResponder = React.useRef(
     PanResponder.create({
@@ -45,9 +54,9 @@ export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
       },
       onPanResponderMove: (_, gestureState) => {
         if (sliderLayout) {
-          const newValue = lastOffset.current + gestureState.dx;
+          const moveValue = lastOffset.current + gestureState.dx;
           const boundedValue = Math.min(
-            Math.max(0, newValue),
+            Math.max(0, moveValue),
             sliderLayout.width
           );
           panValue.setValue(boundedValue - lastOffset.current);
@@ -55,14 +64,17 @@ export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
       },
       onPanResponderRelease: (_, gestureState) => {
         if (sliderLayout) {
-          const newValue = lastOffset.current + gestureState.dx;
+          const releaseValue = lastOffset.current + gestureState.dx;
           const boundedValue = Math.min(
-            Math.max(0, newValue),
+            Math.max(0, releaseValue),
             sliderLayout.width
           );
           lastOffset.current = boundedValue;
           const percentage = (boundedValue / sliderLayout.width) * 100;
-          onValueChange(Math.round(percentage));
+          const calculatedValue = min + (percentage / 100) * (max - min);
+          const steppedValue = Math.round(calculatedValue / step) * step;
+          onValueChange(Math.max(min, Math.min(max, steppedValue)));
+          if (onBlur) onBlur();
         }
       },
     })
@@ -71,7 +83,8 @@ export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
   const handleLayout = (event: LayoutChangeEvent) => {
     const layout = event.nativeEvent.layout;
     setSliderLayout(layout);
-    const initialPosition = (value / 100) * layout.width;
+    const percentage = ((value - min) / (max - min)) * 100;
+    const initialPosition = (percentage / 100) * layout.width;
     panValue.setValue(initialPosition);
     lastOffset.current = initialPosition;
   };
@@ -80,16 +93,14 @@ export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
     transform: [{ translateX: panValue }],
   };
 
-  const trackWidth = value + '%';
+  const percentage = ((value - min) / (max - min)) * 100;
+  const trackWidth = `${percentage}%`;
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View style={styles.labelContainer}>
-          <Text style={styles.icon}>{icon}</Text>
-          <Text style={styles.label}>{label}</Text>
-        </View>
-        <Text style={styles.value}>{valueLabel}</Text>
+        <Text style={styles.label}>{label}</Text>
+        <Text style={styles.value}>{value}{unit}</Text>
       </View>
       <View 
         style={styles.sliderContainer}
@@ -103,6 +114,7 @@ export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
           />
         </View>
       </View>
+      {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
 };
@@ -119,14 +131,6 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
-  },
-  labelContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  icon: {
-    fontSize: 20,
   },
   label: {
     fontSize: 16,
@@ -170,5 +174,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    marginTop: 4,
   },
 });

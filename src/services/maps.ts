@@ -1,3 +1,5 @@
+import { Platform } from 'react-native';
+
 interface Location {
   latitude: number;
   longitude: number;

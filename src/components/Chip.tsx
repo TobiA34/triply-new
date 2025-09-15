@@ -34,7 +34,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.main,
   },
   label: {
-    ...typography.fontSize.sm,
+    fontSize: typography.fontSize.sm,
     color: colors.text.primary,
     fontFamily: typography.fontFamily.medium,
   },

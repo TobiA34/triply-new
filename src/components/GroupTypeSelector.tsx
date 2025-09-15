@@ -21,16 +21,16 @@ const GROUP_OPTIONS: GroupOption[] = [
 ];
 
 interface GroupTypeSelectorProps {
-  value: string;
-  onChange: (value: string) => void;
+  selectedGroupType: string;
+  onGroupTypeChange: (value: string) => void;
 }
 
 export const GroupTypeSelector: React.FC<GroupTypeSelectorProps> = ({
-  value,
-  onChange,
+  selectedGroupType,
+  onGroupTypeChange,
 }) => {
   const [modalVisible, setModalVisible] = useState(false);
-  const selectedOption = GROUP_OPTIONS.find(option => option.id === value) || GROUP_OPTIONS[0];
+  const selectedOption = GROUP_OPTIONS.find(option => option.id === selectedGroupType) || GROUP_OPTIONS[0];
 
   return (
     <>
@@ -62,20 +62,20 @@ export const GroupTypeSelector: React.FC<GroupTypeSelectorProps> = ({
                 key={option.id}
                 style={[
                   styles.option,
-                  option.id === value && styles.optionSelected,
+                  option.id === selectedGroupType && styles.optionSelected,
                 ]}
                 onPress={() => {
-                  onChange(option.id);
+                  onGroupTypeChange(option.id);
                   setModalVisible(false);
                 }}
               >
                 <Text style={[
                   styles.optionText,
-                  option.id === value && styles.optionTextSelected,
+                  option.id === selectedGroupType && styles.optionTextSelected,
                 ]}>
                   {option.icon} {option.label}
                 </Text>
-                {option.id === value && (
+                {option.id === selectedGroupType && (
                   <Text style={styles.checkmark}>✓</Text>
                 )}
               </TouchableOpacity>

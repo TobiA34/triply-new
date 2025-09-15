@@ -6,6 +6,8 @@ interface FormInputProps {
   placeholder: string;
   value: string;
   onChangeText: (text: string) => void;
+  onBlur?: () => void;
+  error?: string;
   icon?: React.ReactNode;
 }
 
@@ -14,21 +16,25 @@ export const FormInput: React.FC<FormInputProps> = ({
   placeholder,
   value,
   onChangeText,
+  onBlur,
+  error,
   icon
 }) => {
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, error && styles.inputError]}>
         <TextInput
           style={styles.input}
           placeholder={placeholder}
           value={value}
           onChangeText={onChangeText}
+          onBlur={onBlur}
           placeholderTextColor="#999"
         />
         {icon && <View style={styles.icon}>{icon}</View>}
       </View>
+      {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   );
 };
@@ -62,5 +68,13 @@ const styles = StyleSheet.create({
   },
   icon: {
     paddingRight: 16,
+  },
+  inputError: {
+    borderColor: '#EF4444',
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 12,
+    marginTop: 4,
   },
 });

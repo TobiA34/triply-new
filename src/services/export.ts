@@ -4,7 +4,7 @@ import * as FileSystem from 'expo-file-system';
 export const exportToFile = async (data: any, filename: string) => {
   try {
     const content = JSON.stringify(data, null, 2);
-    const fileUri = `${FileSystem.documentDirectory}${filename}`;
+    const fileUri = `${FileSystem.documentDirectory || ''}${filename}`;
     
     await FileSystem.writeAsStringAsync(fileUri, content);
     
