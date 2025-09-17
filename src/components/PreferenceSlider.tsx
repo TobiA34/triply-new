@@ -107,7 +107,7 @@ export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
         onLayout={handleLayout}
       >
         <View style={styles.track}>
-          <View style={[styles.fill, { width: trackWidth }]} />
+          <View style={[styles.fill, { width: trackWidth as any }]} />
           <Animated.View
             style={[styles.thumb, animatedStyle]}
             {...panResponder.panHandlers}

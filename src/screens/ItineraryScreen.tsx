@@ -128,7 +128,7 @@ export const ItineraryScreen = () => {
       
       // Select 2-3 activities per day based on interests
       const selectedInterests = interests.slice(0, 2);
-      selectedInterests.forEach(interest => {
+      selectedInterests.forEach((interest: string) => {
         if (activitiesByInterest[interest]) {
           const randomActivity = activitiesByInterest[interest][Math.floor(Math.random() * activitiesByInterest[interest].length)];
           dayActivities.push({ ...randomActivity, id: `${i}-${randomActivity.id}` });

@@ -286,8 +286,8 @@ export const SetupScreen = () => {
 
         <Section title="Who's traveling?">
           <GroupTypeSelector
-            selectedType={selectedGroupType}
-            onTypeSelect={setSelectedGroupType}
+            selectedGroupType={selectedGroupType}
+            onGroupTypeChange={setSelectedGroupType}
           />
         </Section>
 

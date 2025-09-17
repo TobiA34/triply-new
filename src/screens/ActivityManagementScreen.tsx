@@ -16,6 +16,9 @@ import { DatePicker } from '../components/DatePicker';
 import { DurationPicker } from '../components/DurationPicker';
 import { validateForm, validateField, commonRules, ValidationErrors } from '../utils/formValidation';
 import { formatTime } from '../utils/dateFormatting';
+import { computeLeaveBy, estimateTravel, estimateWithAutoMode, pickAutoMode, TravelMode, TravelSettings } from '../services/travelTime';
+import { loadTravelSettings, saveTravelSettings, loadTravelSettingsForTrip, saveTravelSettingsForTrip } from '../services/travelSettings';
+import { scheduleLeaveByNotification, cancelAllScheduledNotifications } from '../services/notifications';
 
 interface ActivityManagementScreenProps {
   trip: Trip;
@@ -27,6 +30,11 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [isSettingsVisible, setIsSettingsVisible] = useState(false);
+  const [defaultMode, setDefaultMode] = useState<'walk' | 'drive' | 'transit' | 'auto'>('walk');
+  const [travelSettings, setTravelSettings] = useState<TravelSettings>({ walkingSpeedKmh: 4.5, defaultBufferMin: 5 });
+  const [useTripSettings, setUseTripSettings] = useState(false);
+  const [nudge, setNudge] = useState<{ text: string; severity: 'info' | 'warn' | 'alert' } | null>(null);
 
   // Form state for adding/editing activities
   const [formData, setFormData] = useState({
@@ -60,7 +68,142 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
 
   useEffect(() => {
     loadActivities();
+    // load persisted travel settings
+    (async () => {
+      const tripS = await loadTravelSettingsForTrip(trip.id);
+      if (tripS) {
+        setUseTripSettings(true);
+        setDefaultMode(tripS.mode);
+        setTravelSettings(tripS.settings);
+      } else {
+        const s = await loadTravelSettings();
+        setDefaultMode(s.mode);
+        setTravelSettings(s.settings);
+      }
+    })();
   }, [trip.id]);
+
+  // Helper: schedule notifications for all upcoming hops today
+  const scheduleAllNotifications = useCallback(async () => {
+    try {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const inSameDay = (iso: string) => {
+        const d = new Date(iso);
+        return d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+      };
+
+      const todayActivities = activities
+        .filter(a => a.day === Math.min(...activities.map(x => x.day)))
+        .sort((a,b) => (a.time || '').localeCompare(b.time || ''));
+
+      await cancelAllScheduledNotifications();
+
+      for (let i = 0; i < todayActivities.length - 1; i++) {
+        const cur = todayActivities[i];
+        const next = todayActivities[i + 1];
+        if (!next.time) continue;
+
+        const toTodayISO = (timeStr: string) => {
+          const [h, m] = (timeStr || '00:00').split(':').map(n => parseInt(n || '0',10));
+          const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h || 0, m || 0, 0, 0);
+          return d.toISOString();
+        };
+
+        const est = (defaultMode === 'auto') ? estimateWithAutoMode(
+          { name: cur.location || cur.name },
+          { name: next.location || next.name },
+          travelSettings
+        ) : estimateTravel(
+          { name: cur.location || cur.name },
+          { name: next.location || next.name },
+          // @ts-ignore
+          (defaultMode === 'auto' ? 'walk' : (defaultMode as any)),
+          travelSettings
+        );
+
+        const leave = computeLeaveBy(
+          toTodayISO(cur.time || '00:00'),
+          toTodayISO(next.time),
+          { name: cur.location || cur.name },
+          { name: next.location || next.name },
+          est.mode,
+          now.toISOString(),
+          travelSettings
+        );
+
+        const leaveDate = new Date(leave.leaveByISO);
+        if (leaveDate > now && inSameDay(leave.leaveByISO)) {
+          // main leave-by alert
+          await scheduleLeaveByNotification('Time to leave', `Depart to make ${next.name}`, leaveDate);
+          // optional 5-minute heads up
+          const fiveMin = new Date(leaveDate.getTime() - 5 * 60000);
+          if (fiveMin > now) {
+            await scheduleLeaveByNotification('Heads up', `Leave in 5 min for ${next.name}`, fiveMin);
+          }
+        }
+      }
+    } catch {}
+  }, [activities, defaultMode, travelSettings]);
+
+  // Periodic nudge checker (every 30 seconds)
+  useEffect(() => {
+    const compute = () => {
+      try {
+        const now = new Date();
+        const todayActivities = activities
+          .filter(a => a.day === Math.min(...activities.map(x => x.day))) // keep simple: first day with activities
+          .sort((a,b) => (a.time || '').localeCompare(b.time || ''));
+        for (let i = 0; i < todayActivities.length - 1; i++) {
+          const cur = todayActivities[i];
+          const next = todayActivities[i + 1];
+          if (!next.time) continue;
+          const toTodayISO = (timeStr: string) => {
+            const [h, m] = (timeStr || '00:00').split(':').map(n => parseInt(n || '0',10));
+            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h || 0, m || 0, 0, 0);
+            return d.toISOString();
+          };
+          const est = (defaultMode === 'auto') ? estimateWithAutoMode(
+            { name: cur.location || cur.name },
+            { name: next.location || next.name },
+            travelSettings
+          ) : estimateTravel(
+            { name: cur.location || cur.name },
+            { name: next.location || next.name },
+            // @ts-ignore
+          (defaultMode === 'auto' ? 'walk' : (defaultMode as any)),
+            travelSettings
+          );
+          const leave = computeLeaveBy(
+            toTodayISO(cur.time || '00:00'),
+            toTodayISO(next.time),
+            { name: cur.location || cur.name },
+            { name: next.location || next.name },
+            est.mode,
+            now.toISOString(),
+            travelSettings
+          );
+          const minsToLeave = Math.round((new Date(leave.leaveByISO).getTime() - now.getTime()) / 60000);
+          if (leave.status === 'late' || (leave.status === 'at_risk' && minsToLeave <= 5)) {
+            setNudge({
+              text: `${leave.status === 'late' ? 'You are late' : 'Time to leave'}: depart now to make ${formatTime(toTodayISO(next.time))}`,
+              severity: leave.status === 'late' ? 'alert' : 'warn',
+            });
+            // schedule immediate notification if within 5 minutes
+            if (minsToLeave <= 5) {
+              scheduleLeaveByNotification('Time to leave', `Depart now to make ${next.name}`, new Date());
+            }
+            return;
+          }
+        }
+        setNudge(null);
+      } catch {}
+    };
+
+    const interval = setInterval(compute, 30000);
+    compute(); // run once immediately
+    return () => clearInterval(interval);
+  }, [activities, defaultMode, travelSettings]);
 
   const loadActivities = useCallback(async () => {
     try {
@@ -248,10 +391,21 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
           <TouchableOpacity style={styles.addButton} onPress={handleAddActivity}>
             <Text style={styles.addButtonText}>+ Add</Text>
           </TouchableOpacity>
+          <TouchableOpacity style={styles.settingsButton} onPress={() => setIsSettingsVisible(true)}>
+            <Text style={styles.settingsButtonText}>⚙︎</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.settingsButton} onPress={scheduleAllNotifications}>
+            <Text style={styles.settingsButtonText}>🔔</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+        {nudge && (
+          <View style={[styles.banner, nudge.severity === 'alert' ? styles.bannerAlert : nudge.severity === 'warn' ? styles.bannerWarn : styles.bannerInfo]}>
+            <Text style={styles.bannerText}>{nudge.text}</Text>
+          </View>
+        )}
         {Object.keys(groupedActivities).length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>🎯</Text>
@@ -264,7 +418,52 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
             .map(([day, dayActivities]) => (
               <View key={day} style={styles.daySection}>
                 <Text style={styles.dayTitle}>Day {day}</Text>
-                {dayActivities.map((activity) => (
+                {dayActivities.map((activity, idx) => {
+                  const next = dayActivities[idx + 1];
+
+                  // Helper: build a Date ISO for today with HH:MM from activity.time
+                  const toTodayISO = (timeStr: string) => {
+                    const now = new Date();
+                    const [h, m] = (timeStr || '00:00').split(':').map((n) => parseInt(n || '0', 10));
+                    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h || 0, m || 0, 0, 0);
+                    return d.toISOString();
+                  };
+
+                  // Compute travel/leave-by only if there is a next activity with a start time
+                  let leaveByInfo: {
+                    text: string;
+                    status: 'on_time' | 'at_risk' | 'late';
+                  } | null = null;
+
+                  if (next && next.time) {
+                    const mode: TravelMode = defaultMode === 'auto' ? pickAutoMode(0) : (defaultMode as TravelMode);
+                    const est = (defaultMode === 'auto') ? estimateWithAutoMode(
+                      { name: activity.location || activity.name },
+                      { name: next.location || next.name },
+                      travelSettings
+                    ) : estimateTravel(
+                      { name: activity.location || activity.name },
+                      { name: next.location || next.name },
+                      mode,
+                      travelSettings
+                    );
+                    const leave = computeLeaveBy(
+                      toTodayISO(activity.time || '00:00'),
+                      toTodayISO(next.time),
+                      { name: activity.location || activity.name },
+                      { name: next.location || next.name },
+                      (defaultMode === 'auto') ? est.mode : mode,
+                      undefined,
+                      travelSettings
+                    );
+                    const leaveByFormatted = formatTime(new Date(leave.leaveByISO).toISOString());
+                    leaveByInfo = {
+                      text: `Leave by ${leaveByFormatted} • ${est.durationMin} min + ${est.bufferMin} min buffer • ${est.distanceKm} km` ,
+                      status: leave.status,
+                    };
+                  }
+
+                  return (
                   <View key={activity.id} style={styles.activityCard}>
                     <View style={styles.activityHeader}>
                       <Text style={styles.activityName}>{activity.name}</Text>
@@ -291,8 +490,19 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
                       <Text style={styles.activityDetail}>💰 {activity.cost}</Text>
                       <Text style={styles.activityDetail}>🕐 {formatTime(activity.time)}</Text>
                     </View>
+                    {leaveByInfo && (
+                      <View style={styles.nudgeRow}>
+                        <Text style={
+                          leaveByInfo.status === 'on_time' ? styles.nudgeOnTime :
+                          leaveByInfo.status === 'at_risk' ? styles.nudgeAtRisk :
+                          styles.nudgeLate
+                        }>
+                          {leaveByInfo.text}
+                        </Text>
+                      </View>
+                    )}
                   </View>
-                ))}
+                )})}
               </View>
             ))
         )}
@@ -523,6 +733,77 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      {/* Travel Settings Modal */}
+      <Modal
+        visible={isSettingsVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={async () => { 
+              if (useTripSettings) {
+                await saveTravelSettingsForTrip(trip.id, { mode: (defaultMode === 'auto' ? 'walk' : defaultMode) as TravelMode, settings: travelSettings });
+              } else {
+                await saveTravelSettings({ mode: (defaultMode === 'auto' ? 'walk' : defaultMode) as TravelMode, settings: travelSettings });
+              }
+              setIsSettingsVisible(false);
+            }}>
+              <Text style={styles.cancelButton}>Close</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Travel Settings</Text>
+            <View style={{ width: 48 }} />
+          </View>
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Default Mode</Text>
+              <View style={styles.row}>
+                {(['auto','walk','drive','transit'] as (TravelMode|'auto')[]).map((mode) => (
+                  <TouchableOpacity
+                    key={mode}
+                    style={[styles.typeChip, defaultMode === mode && styles.selectedTypeChip]}
+                    onPress={() => setDefaultMode(mode)}
+                  >
+                    <Text style={[styles.typeChipText, defaultMode === mode && styles.selectedTypeChipText]}>
+                      {mode}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
+              <TouchableOpacity onPress={() => setUseTripSettings(v => !v)}>
+                <Text style={styles.inputLabel}>{useTripSettings ? '✓ Using trip-specific settings' : 'Use trip-specific settings'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.row}>
+              <View style={styles.halfInput}>
+                <Text style={styles.inputLabel}>Walking Speed (km/h)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  keyboardType="numeric"
+                  value={String(travelSettings.walkingSpeedKmh)}
+                  onChangeText={(t) => setTravelSettings((s) => ({ ...s, walkingSpeedKmh: Math.max(2, Math.min(7, parseFloat(t) || 0)) }))}
+                  placeholder="4.5"
+                />
+              </View>
+              <View style={styles.halfInput}>
+                <Text style={styles.inputLabel}>Default Buffer (min)</Text>
+                <TextInput
+                  style={styles.textInput}
+                  keyboardType="numeric"
+                  value={String(travelSettings.defaultBufferMin)}
+                  onChangeText={(t) => setTravelSettings((s) => ({ ...s, defaultBufferMin: Math.max(0, Math.min(30, parseInt(t || '0'))) }))}
+                  placeholder="5"
+                />
+              </View>
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 };
@@ -571,11 +852,39 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  settingsButton: {
+    marginLeft: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  settingsButtonText: {
+    fontSize: 18,
+    color: '#6B7280',
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     padding: 16,
+  },
+  banner: {
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  bannerText: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  bannerInfo: {
+    backgroundColor: '#DBEAFE',
+  },
+  bannerWarn: {
+    backgroundColor: '#FEF3C7',
+  },
+  bannerAlert: {
+    backgroundColor: '#FEE2E2',
   },
   emptyContainer: {
     alignItems: 'center',
@@ -681,6 +990,22 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#6B7280',
     marginBottom: 4,
+  },
+  nudgeRow: {
+    marginTop: 6,
+  },
+  nudgeOnTime: {
+    color: '#059669',
+    fontSize: 12,
+  },
+  nudgeAtRisk: {
+    color: '#D97706',
+    fontSize: 12,
+  },
+  nudgeLate: {
+    color: '#DC2626',
+    fontSize: 12,
+    fontWeight: '600',
   },
   modalContainer: {
     flex: 1,
