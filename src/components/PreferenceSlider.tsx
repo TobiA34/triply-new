@@ -1,13 +1,6 @@
-import React, { useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  PanResponder,
-  Animated,
-  LayoutRectangle,
-  LayoutChangeEvent,
-} from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import Slider from '@react-native-community/slider';
 
 interface PreferenceSliderProps {
   label: string;
@@ -32,69 +25,7 @@ export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
   onBlur,
   error,
 }) => {
-  const [sliderLayout, setSliderLayout] = React.useState<LayoutRectangle | null>(null);
-  const panValue = useRef(new Animated.Value(0)).current;
-  const lastOffset = useRef(0);
-
-  React.useEffect(() => {
-    if (sliderLayout) {
-      const percentage = ((value - min) / (max - min)) * 100;
-      const newPosition = (percentage / 100) * sliderLayout.width;
-      panValue.setValue(newPosition);
-      lastOffset.current = newPosition;
-    }
-  }, [value, sliderLayout, min, max]);
-
-  const panResponder = React.useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => {
-        panValue.setOffset(lastOffset.current);
-      },
-      onPanResponderMove: (_, gestureState) => {
-        if (sliderLayout) {
-          const moveValue = lastOffset.current + gestureState.dx;
-          const boundedValue = Math.min(
-            Math.max(0, moveValue),
-            sliderLayout.width
-          );
-          panValue.setValue(boundedValue - lastOffset.current);
-        }
-      },
-      onPanResponderRelease: (_, gestureState) => {
-        if (sliderLayout) {
-          const releaseValue = lastOffset.current + gestureState.dx;
-          const boundedValue = Math.min(
-            Math.max(0, releaseValue),
-            sliderLayout.width
-          );
-          lastOffset.current = boundedValue;
-          const percentage = (boundedValue / sliderLayout.width) * 100;
-          const calculatedValue = min + (percentage / 100) * (max - min);
-          const steppedValue = Math.round(calculatedValue / step) * step;
-          onValueChange(Math.max(min, Math.min(max, steppedValue)));
-          if (onBlur) onBlur();
-        }
-      },
-    })
-  ).current;
-
-  const handleLayout = (event: LayoutChangeEvent) => {
-    const layout = event.nativeEvent.layout;
-    setSliderLayout(layout);
-    const percentage = ((value - min) / (max - min)) * 100;
-    const initialPosition = (percentage / 100) * layout.width;
-    panValue.setValue(initialPosition);
-    lastOffset.current = initialPosition;
-  };
-
-  const animatedStyle = {
-    transform: [{ translateX: panValue }],
-  };
-
-  const percentage = ((value - min) / (max - min)) * 100;
-  const trackWidth = `${percentage}%`;
+  // Library slider handles visuals; we just display label/value
 
   return (
     <View style={styles.container}>
@@ -102,17 +33,19 @@ export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
         <Text style={styles.label}>{label}</Text>
         <Text style={styles.value}>{value}{unit}</Text>
       </View>
-      <View 
-        style={styles.sliderContainer}
-        onLayout={handleLayout}
-      >
-        <View style={styles.track}>
-          <View style={[styles.fill, { width: trackWidth as any }]} />
-          <Animated.View
-            style={[styles.thumb, animatedStyle]}
-            {...panResponder.panHandlers}
-          />
-        </View>
+      <View style={styles.sliderContainer}>
+        <Slider
+          style={styles.nativeSlider}
+          minimumValue={min}
+          maximumValue={max}
+          step={step}
+          value={value}
+          minimumTrackTintColor="#4285F4"
+          maximumTrackTintColor="#E5E7EB"
+          thumbTintColor="#4285F4"
+          onValueChange={(v) => onValueChange(v)}
+          onSlidingComplete={() => onBlur && onBlur()}
+        />
       </View>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
@@ -143,37 +76,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   sliderContainer: {
-    height: 20,
+    height: 40,
     justifyContent: 'center',
   },
-  track: {
-    height: 4,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 2,
-    position: 'relative',
-  },
-  fill: {
-    position: 'absolute',
-    height: '100%',
-    backgroundColor: '#4285F4',
-    borderRadius: 2,
-  },
-  thumb: {
-    position: 'absolute',
-    width: 20,
-    height: 20,
-    backgroundColor: '#4285F4',
-    borderRadius: 10,
-    top: -8,
-    marginLeft: -10,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+  nativeSlider: {
+    width: '100%',
+    height: 40,
   },
   errorText: {
     color: '#EF4444',
