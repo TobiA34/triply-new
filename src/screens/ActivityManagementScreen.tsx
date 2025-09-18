@@ -19,13 +19,17 @@ import { formatTime } from '../utils/dateFormatting';
 import { computeLeaveBy, estimateTravel, estimateWithAutoMode, pickAutoMode, TravelMode, TravelSettings } from '../services/travelTime';
 import { loadTravelSettings, saveTravelSettings, loadTravelSettingsForTrip, saveTravelSettingsForTrip } from '../services/travelSettings';
 import { scheduleLeaveByNotification, cancelAllScheduledNotifications } from '../services/notifications';
+import * as ImagePicker from 'expo-image-picker';
+import { extractAmountFromImage } from '../services/ocr';
+import { loadCurrencySettings, saveCurrencySettings, getCurrencySymbol } from '../services/currency';
 
 interface ActivityManagementScreenProps {
   trip: Trip;
   onClose: () => void;
+  initialDay?: number;
 }
 
-export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementScreenProps) => {
+export const ActivityManagementScreen = ({ trip, onClose, initialDay }: ActivityManagementScreenProps) => {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -35,6 +39,13 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
   const [travelSettings, setTravelSettings] = useState<TravelSettings>({ walkingSpeedKmh: 4.5, defaultBufferMin: 5 });
   const [useTripSettings, setUseTripSettings] = useState(false);
   const [nudge, setNudge] = useState<{ text: string; severity: 'info' | 'warn' | 'alert' } | null>(null);
+  const [isPollVisible, setIsPollVisible] = useState(false);
+  const [pollOptions, setPollOptions] = useState<string[]>(['Museum', 'Food tour', 'Boat ride']);
+  const [votes, setVotes] = useState<Record<string, number>>({ Museum: 0, 'Food tour': 0, 'Boat ride': 0 });
+  const [pollDay, setPollDay] = useState<number>(1);
+  const [pollTime, setPollTime] = useState<string>('12:00');
+  const [isDayPickerOpen, setIsDayPickerOpen] = useState(false);
+  const [currencySymbol, setCurrencySymbol] = useState<string>('£');
 
   // Form state for adding/editing activities
   const [formData, setFormData] = useState({
@@ -46,6 +57,9 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
     location: '',
     time: '',
     day: 1,
+    receiptUri: '' as string | undefined,
+    bookingStatus: 'placeholder' as ('placeholder' | 'booked' | 'canceled'),
+    bookingReminderTime: '' as string,
   });
   const [formErrors, setFormErrors] = useState<ValidationErrors>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
@@ -67,7 +81,10 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
   }), []);
 
   useEffect(() => {
-    loadActivities();
+    (async () => {
+      try { await databaseService.init(); } catch {}
+      loadActivities();
+    })();
     // load persisted travel settings
     (async () => {
       const tripS = await loadTravelSettingsForTrip(trip.id);
@@ -80,6 +97,11 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
         setDefaultMode(s.mode);
         setTravelSettings(s.settings);
       }
+      // currency
+      try {
+        const cs = await loadCurrencySettings();
+        setCurrencySymbol(getCurrencySymbol(cs.currency));
+      } catch {}
     })();
   }, [trip.id]);
 
@@ -117,8 +139,7 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
         ) : estimateTravel(
           { name: cur.location || cur.name },
           { name: next.location || next.name },
-          // @ts-ignore
-          (defaultMode === 'auto' ? 'walk' : (defaultMode as any)),
+          (defaultMode === 'auto' ? 'walk' : defaultMode),
           travelSettings
         );
 
@@ -170,8 +191,7 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
           ) : estimateTravel(
             { name: cur.location || cur.name },
             { name: next.location || next.name },
-            // @ts-ignore
-          (defaultMode === 'auto' ? 'walk' : (defaultMode as any)),
+            (defaultMode === 'auto' ? 'walk' : defaultMode),
             travelSettings
           );
           const leave = computeLeaveBy(
@@ -225,6 +245,9 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
       location: '',
       time: '',
       day: 1,
+      receiptUri: undefined,
+      bookingStatus: 'placeholder',
+      bookingReminderTime: '',
     });
     setFormErrors({});
     setTouched({});
@@ -241,6 +264,16 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
       location: activity.location,
       time: activity.time,
       day: activity.day,
+      receiptUri: (activity as any).receiptUri || undefined,
+      bookingStatus: ((activity as any).bookingStatus || 'placeholder') as any,
+      bookingReminderTime: (() => {
+        const iso = (activity as any).bookingReminderISO as string | undefined;
+        if (!iso) return '';
+        const d = new Date(iso);
+        const hh = String(d.getHours()).padStart(2,'0');
+        const mm = String(d.getMinutes()).padStart(2,'0');
+        return `${hh}:${mm}`;
+      })(),
     });
     setEditingActivity(activity);
     setIsEditModalVisible(true);
@@ -287,17 +320,36 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
           location: formData.location,
           time: formData.time,
           day: formData.day,
+          receiptUri: formData.receiptUri || null,
+          bookingStatus: formData.bookingStatus || null,
+          bookingReminderISO: (() => {
+            if (!formData.bookingReminderTime) return null;
+            const now = new Date();
+            const [h, m] = formData.bookingReminderTime.split(':').map(n=>parseInt(n||'0',10));
+            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h||0, m||0, 0, 0);
+            return d.toISOString();
+          })(),
         });
         
         setActivities(prev => 
           prev.map(activity => 
             activity.id === editingActivity.id 
-              ? { ...activity, ...formData }
+              ? { ...activity, ...formData, bookingReminderISO: formData.bookingReminderTime ? (()=>{ const now = new Date(); const [h,m]=formData.bookingReminderTime.split(':').map(n=>parseInt(n||'0',10)); const d=new Date(now.getFullYear(), now.getMonth(), now.getDate(), h||0, m||0, 0,0); return d.toISOString(); })() : undefined }
               : activity
           )
         );
         setIsEditModalVisible(false);
         setEditingActivity(null);
+
+        // Schedule booking reminder notification if set
+        if (formData.bookingReminderTime) {
+          const now = new Date();
+          const [h, m] = formData.bookingReminderTime.split(':').map(n => parseInt(n || '0', 10));
+          const reminderDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h || 0, m || 0, 0, 0);
+          if (reminderDate > new Date()) {
+            try { await scheduleLeaveByNotification('Booking reminder', `Confirm ${formData.name}`, reminderDate); } catch {}
+          }
+        }
       } else {
         // Create new activity
         const activityId = await databaseService.saveActivity({
@@ -310,6 +362,15 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
           location: formData.location,
           time: formData.time,
           day: formData.day,
+          receiptUri: formData.receiptUri || null,
+          bookingStatus: formData.bookingStatus || null,
+          bookingReminderISO: (() => {
+            if (!formData.bookingReminderTime) return null;
+            const now = new Date();
+            const [h, m] = formData.bookingReminderTime.split(':').map(n=>parseInt(n||'0',10));
+            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h||0, m||0, 0, 0);
+            return d.toISOString();
+          })(),
         });
         
         const newActivity: Activity = {
@@ -323,12 +384,25 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
           location: formData.location,
           time: formData.time,
           day: formData.day,
+          receiptUri: formData.receiptUri || undefined,
+          bookingStatus: formData.bookingStatus || undefined,
+          bookingReminderISO: formData.bookingReminderTime ? (()=>{ const now = new Date(); const [h,m]=formData.bookingReminderTime.split(':').map(n=>parseInt(n||'0',10)); const d=new Date(now.getFullYear(), now.getMonth(), now.getDate(), h||0, m||0, 0,0); return d.toISOString(); })() : undefined,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-        };
+        } as any;
         
         setActivities(prev => [...prev, newActivity]);
         setIsAddModalVisible(false);
+
+        // Schedule booking reminder notification if set
+        if (formData.bookingReminderTime) {
+          const now = new Date();
+          const [h, m] = formData.bookingReminderTime.split(':').map(n => parseInt(n || '0', 10));
+          const reminderDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h || 0, m || 0, 0, 0);
+          if (reminderDate > new Date()) {
+            try { await scheduleLeaveByNotification('Booking reminder', `Confirm ${formData.name}`, reminderDate); } catch {}
+          }
+        }
       }
 
       setFormData({
@@ -340,6 +414,9 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
         location: '',
         time: '',
         day: 1,
+        receiptUri: undefined,
+        bookingStatus: 'placeholder',
+        bookingReminderTime: '',
       });
     } catch (error) {
       console.error('Error saving activity:', error);
@@ -379,24 +456,36 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
   };
 
   const groupedActivities = useMemo(() => groupActivitiesByDay(activities), [activities]);
+  const visibleDays = useMemo(() => {
+    const days = Object.keys(groupedActivities).map(d => parseInt(d));
+    if (!initialDay || !days.includes(initialDay)) return days;
+    return [initialDay];
+  }, [groupedActivities, initialDay]);
 
   return (
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={onClose}>
-            <Text style={styles.backButtonText}>← Back</Text>
+          <TouchableOpacity style={styles.iconButton} onPress={onClose}>
+            <Text style={styles.iconText}>←</Text>
           </TouchableOpacity>
-          <Text style={styles.title}>Activities for {trip.destination}</Text>
-          <TouchableOpacity style={styles.addButton} onPress={handleAddActivity}>
-            <Text style={styles.addButtonText}>+ Add</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.settingsButton} onPress={() => setIsSettingsVisible(true)}>
-            <Text style={styles.settingsButtonText}>⚙︎</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.settingsButton} onPress={scheduleAllNotifications}>
-            <Text style={styles.settingsButtonText}>🔔</Text>
-          </TouchableOpacity>
+          <View style={styles.headerCenter}>
+            <Text style={styles.title} numberOfLines={1}>Activities for {trip.destination}</Text>
+          </View>
+          <View style={styles.headerActions}>
+            <TouchableOpacity style={styles.iconButton} onPress={() => setIsPollVisible(true)}>
+              <Text style={styles.iconText}>🗳️</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton} onPress={scheduleAllNotifications}>
+              <Text style={styles.iconText}>🔔</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.iconButton} onPress={() => setIsSettingsVisible(true)}>
+              <Text style={styles.iconText}>⚙︎</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.addButton} onPress={handleAddActivity}>
+              <Text style={styles.addButtonText}>+ Add</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </SafeAreaView>
 
@@ -406,6 +495,19 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
             <Text style={styles.bannerText}>{nudge.text}</Text>
           </View>
         )}
+        {(() => {
+          if (!initialDay) return null;
+          const cap = (trip as any).dailySpendCap as number | undefined;
+          if (typeof cap !== 'number' || cap == null) return null;
+          const dayActs = activities.filter(a => a.day === initialDay);
+          const total = dayActs.reduce((acc, a) => acc + (parseFloat(a.cost || '0') || 0), 0);
+          const over = total > cap;
+          return (
+            <View style={[styles.banner, over ? styles.bannerAlert : styles.bannerInfo]}>
+              <Text style={styles.bannerText}>Day {initialDay} spend: {total.toFixed(2)} / {cap.toFixed(2)}</Text>
+            </View>
+          );
+        })()}
         {Object.keys(groupedActivities).length === 0 ? (
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyIcon}>🎯</Text>
@@ -414,10 +516,20 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
           </View>
         ) : (
           Object.entries(groupedActivities)
+            .filter(([day]) => !initialDay || parseInt(day) === initialDay)
             .sort(([a], [b]) => parseInt(a) - parseInt(b))
             .map(([day, dayActivities]) => (
               <View key={day} style={styles.daySection}>
                 <Text style={styles.dayTitle}>Day {day}</Text>
+                {(() => {
+                  const total = (dayActivities as Activity[]).reduce((acc, a) => acc + (parseFloat(a.cost || '0') || 0), 0);
+                  const cap = (trip as any).dailySpendCap as number | undefined;
+                  if (typeof cap !== 'number' || cap == null) return null;
+                  const over = total > cap;
+                  return (
+                    <Text style={[styles.daySpend, over ? styles.overCap : styles.underCap]}>Spend {total.toFixed(2)} / {cap.toFixed(2)}</Text>
+                  );
+                })()}
                 {dayActivities.map((activity, idx) => {
                   const next = dayActivities[idx + 1];
 
@@ -487,8 +599,14 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
                     <View style={styles.activityDetails}>
                       <Text style={styles.activityDetail}>📍 {activity.location}</Text>
                       <Text style={styles.activityDetail}>⏱️ {activity.duration}</Text>
-                      <Text style={styles.activityDetail}>💰 {activity.cost}</Text>
+                      <Text style={styles.activityDetail}>💰 {currencySymbol}{activity.cost}</Text>
                       <Text style={styles.activityDetail}>🕐 {formatTime(activity.time)}</Text>
+                      {(activity as any).bookingStatus && (
+                        <Text style={styles.activityDetail}>📑 {(activity as any).bookingStatus}</Text>
+                      )}
+                      {(activity as any).receiptUri && (
+                        <Text style={styles.activityDetail}>🧾 Receipt</Text>
+                      )}
                     </View>
                     {leaveByInfo && (
                       <View style={styles.nudgeRow}>
@@ -587,6 +705,64 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
                 />
               </View>
             </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Booking Status</Text>
+              <View style={[styles.row, { flexWrap: 'nowrap' }]}>
+                {(['placeholder','booked','canceled'] as const).map((st) => {
+                  const selected = formData.bookingStatus === st;
+                  return (
+                    <TouchableOpacity
+                      key={st}
+                      activeOpacity={0.8}
+                      style={[styles.typeChip, selected ? styles.selectedTypeChip : null]}
+                      onPress={() => {
+                        if (!selected) setFormData(prev => ({ ...prev, bookingStatus: st }));
+                      }}
+                    >
+                      <Text style={[styles.typeChipText, selected ? styles.selectedTypeChipText : null]} numberOfLines={1}>
+                        {st}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Booking Reminder</Text>
+              <DatePicker
+                value={formData.bookingReminderTime}
+                onChange={(time) => setFormData(prev => ({ ...prev, bookingReminderTime: time }))}
+                mode="time"
+                placeholder="e.g. 09:00"
+              />
+            </View>
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Receipt</Text>
+              <View style={styles.row}>
+                <TouchableOpacity
+                  style={styles.editButton}
+                  onPress={async () => {
+                    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7 });
+                    if (!res.canceled && res.assets && res.assets[0]) {
+                      const uri = res.assets[0].uri;
+                      setFormData(prev => ({ ...prev, receiptUri: uri }));
+                      const amt = await extractAmountFromImage(uri);
+                      const asNumber = parseFloat(formData.cost || '');
+                      const costValid = Number.isFinite(asNumber) && asNumber > 0;
+                      if (amt != null && !costValid) {
+                        setFormData(prev => ({ ...prev, cost: String(amt.toFixed(2)) }));
+                      }
+                    }
+                  }}
+                >
+                  <Text style={styles.editButtonText}>{formData.receiptUri ? 'Change Receipt' : 'Upload Receipt'}</Text>
+                </TouchableOpacity>
+                {formData.receiptUri ? (
+                  <Text style={[styles.activityDetail, { alignSelf: 'center' }]}>Attached</Text>
+                ) : null}
+              </View>
+            </View>
+            {/* Removed duplicate Booking Status/Reminder/Receipt to declutter */}
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Location</Text>
               <TextInput
@@ -774,6 +950,28 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
             </View>
 
             <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Currency</Text>
+              <View style={styles.row}>
+                {(['GBP','USD','EUR'] as const).map((code) => (
+                  <TouchableOpacity
+                    key={code}
+                    style={[styles.typeChip, getCurrencySymbol(code) === currencySymbol && styles.selectedTypeChip]}
+                    onPress={async () => {
+                      try {
+                        await saveCurrencySettings({ currency: code });
+                        setCurrencySymbol(getCurrencySymbol(code));
+                      } catch {}
+                    }}
+                  >
+                    <Text style={[styles.typeChipText, getCurrencySymbol(code) === currencySymbol && styles.selectedTypeChipText]}>
+                      {getCurrencySymbol(code)} {code}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            <View style={styles.inputGroup}>
               <TouchableOpacity onPress={() => setUseTripSettings(v => !v)}>
                 <Text style={styles.inputLabel}>{useTripSettings ? '✓ Using trip-specific settings' : 'Use trip-specific settings'}</Text>
               </TouchableOpacity>
@@ -804,6 +1002,124 @@ export const ActivityManagementScreen = ({ trip, onClose }: ActivityManagementSc
           </ScrollView>
         </SafeAreaView>
       </Modal>
+
+      {/* Group Poll Modal */}
+      <Modal
+        visible={isPollVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setIsPollVisible(false)}>
+              <Text style={styles.cancelButton}>Close</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Group Poll</Text>
+            <TouchableOpacity
+              onPress={() => {
+                // determine winner and merge into itinerary on current day
+                const winner = Object.entries(votes).sort((a,b) => b[1]-a[1])[0]?.[0];
+                const validTime = /^([0-1]\d|2[0-3]):([0-5]\d)$/.test(pollTime);
+                const validDay = Number.isFinite(pollDay) && pollDay >= 1;
+                if (!winner || !validTime || !validDay) { setIsPollVisible(false); return; }
+                const newActivity = {
+                  tripId: trip.id,
+                  name: winner,
+                  type: 'General',
+                  duration: '1 hour',
+                  cost: '0',
+                  description: `Added from poll: ${winner}`,
+                  location: winner,
+                  time: pollTime,
+                  day: pollDay,
+                } as any;
+                // Save poll to DB
+                databaseService.savePoll({ tripId: trip.id, day: pollDay, time: pollTime, options: JSON.stringify(pollOptions), votes: JSON.stringify(votes) } as any).catch(()=>{});
+                databaseService.saveActivity(newActivity).then((id) => {
+                  setActivities(prev => [...prev, { ...newActivity, id, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as any]);
+                  setIsPollVisible(false);
+                });
+              }}
+            >
+              <Text style={styles.saveButton}>Merge</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.row}>
+              <View style={styles.halfInput}>
+                <Text style={styles.inputLabel}>Day</Text>
+                <TouchableOpacity
+                  style={[styles.textInput, { justifyContent: 'center' }]}
+                  onPress={() => setIsDayPickerOpen(true)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={{ fontSize: 16 }}>{String(pollDay)}</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={styles.halfInput}>
+                <Text style={styles.inputLabel}>Time</Text>
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="HH:MM"
+                  value={pollTime}
+                  onChangeText={setPollTime}
+                />
+              </View>
+            </View>
+            {pollOptions.map((opt) => (
+              <View key={opt} style={styles.pollRow}>
+                <Text style={styles.pollOption}>{opt}</Text>
+                <View style={styles.row}>
+                  <TouchableOpacity
+                    style={styles.voteButton}
+                    onPress={() => setVotes(prev => ({ ...prev, [opt]: (prev[opt] || 0) + 1 }))}
+                  >
+                    <Text style={styles.voteText}>+1</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.voteCount}>{votes[opt] || 0}</Text>
+                </View>
+              </View>
+            ))}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Add Option</Text>
+              <TextInput
+                style={styles.textInput}
+                placeholder="Activity option"
+                maxLength={60}
+                returnKeyType="done"
+                onSubmitEditing={(e) => {
+                  const val = e.nativeEvent.text?.trim();
+                  if (!val || val.length < 2) return;
+                  if (!pollOptions.includes(val)) {
+                    setPollOptions(prev => [...prev, val]);
+                    setVotes(prev => ({ ...prev, [val]: 0 }));
+                  }
+                }}
+              />
+            </View>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Day dropdown picker */}
+      <Modal visible={isDayPickerOpen} transparent animationType="fade" onRequestClose={() => setIsDayPickerOpen(false)}>
+        <View style={styles.pickerOverlay}>
+          <View style={styles.pickerCard}>
+            <Text style={styles.pickerTitle}>Select Day</Text>
+            <ScrollView style={{ maxHeight: 300 }}>
+              {Array.from({ length: 30 }, (_, i) => i + 1).map((d) => (
+                <TouchableOpacity key={d} style={styles.pickerItem} onPress={() => { setPollDay(d); setIsDayPickerOpen(false); }}>
+                  <Text style={styles.pickerItemText}>Day {d}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <TouchableOpacity style={styles.pickerCancel} onPress={() => setIsDayPickerOpen(false)}>
+              <Text style={styles.cancelButton}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -822,44 +1138,31 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 12,
-    paddingBottom: 16,
+    paddingBottom: 12,
   },
-  backButton: {
-    padding: 8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    color: '#4285F4',
-    fontWeight: '500',
-  },
+  iconButton: { paddingHorizontal: 8, paddingVertical: 6 },
+  iconText: { fontSize: 18, color: '#6B7280' },
+  headerCenter: { flex: 1, paddingHorizontal: 8 },
   title: {
     fontSize: 18,
     fontWeight: '600',
     color: '#111827',
-    flex: 1,
-    textAlign: 'center',
+    textAlign: 'left',
   },
+  headerActions: { flexDirection: 'row', alignItems: 'center' },
   addButton: {
     backgroundColor: '#4285F4',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 8,
+    marginLeft: 8,
   },
   addButtonText: {
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '600',
-  },
-  settingsButton: {
-    marginLeft: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  settingsButtonText: {
-    fontSize: 18,
-    color: '#6B7280',
   },
   scrollView: {
     flex: 1,
@@ -1087,5 +1390,65 @@ const styles = StyleSheet.create({
   },
   selectedTypeChipText: {
     color: '#FFFFFF',
+  },
+  pollRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  pollOption: {
+    fontSize: 16,
+    color: '#111827',
+  },
+  voteButton: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  voteText: {
+    color: '#111827',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  voteCount: {
+    fontSize: 14,
+    color: '#6B7280',
+    minWidth: 20,
+    textAlign: 'center',
+  },
+  pickerOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  pickerCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+  },
+  pickerTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 12,
+  },
+  pickerItem: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  pickerItemText: {
+    fontSize: 16,
+    color: '#111827',
+  },
+  pickerCancel: {
+    marginTop: 8,
+    alignSelf: 'center',
   },
 });

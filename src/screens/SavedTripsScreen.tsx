@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { databaseService, Trip } from '../services/database';
+import { getSpendByDayForTrip } from '../services/database';
 import { Section } from '../components/Section';
 import { Chip } from '../components/Chip';
 import { FormInput } from '../components/FormInput';
@@ -20,6 +21,7 @@ import { GroupTypeSelector } from '../components/GroupTypeSelector';
 import { PreferenceSlider } from '../components/PreferenceSlider';
 import { ActivityManagementScreen } from './ActivityManagementScreen';
 import { formatDate, formatDateRange, formatRelativeDate } from '../utils/dateFormatting';
+import { formatCurrency } from '../services/currency';
 
 interface FormErrors {
   [key: string]: string;
@@ -32,6 +34,9 @@ export const SavedTripsScreen = () => {
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [overCapCounts, setOverCapCounts] = useState<Record<string, number>>({});
+  const [spendByTrip, setSpendByTrip] = useState<Record<string, { day: number; total: number }[]>>({});
+  const [totalSpendByTrip, setTotalSpendByTrip] = useState<Record<string, number>>({});
 
   // Edit form state
   const [editDestination, setEditDestination] = useState('');
@@ -39,6 +44,7 @@ export const SavedTripsScreen = () => {
   const [editCheckOut, setEditCheckOut] = useState('');
   const [editBudget, setEditBudget] = useState(50);
   const [editActivityLevel, setEditActivityLevel] = useState(50);
+  const [editDailyCap, setEditDailyCap] = useState<number | undefined>(undefined);
   const [editSelectedGroupType, setEditSelectedGroupType] = useState('couple');
   const [editSelectedInterests, setEditSelectedInterests] = useState<string[]>([]);
   const [editErrors, setEditErrors] = useState<FormErrors>({});
@@ -47,6 +53,7 @@ export const SavedTripsScreen = () => {
   // Activity management state
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
   const [isActivityModalVisible, setIsActivityModalVisible] = useState(false);
+  const [pendingInitialDay, setPendingInitialDay] = useState<number | undefined>(undefined);
 
   // Define interests array
   const interests = [
@@ -82,6 +89,31 @@ export const SavedTripsScreen = () => {
     try {
       const savedTrips = await databaseService.getAllTrips();
       setTrips(savedTrips);
+      // compute over-cap days per trip
+      const entries = await Promise.all(savedTrips.map(async (t) => {
+        const cap = (t as any).dailySpendCap as number | undefined;
+        if (typeof cap !== 'number' || cap == null) return [t.id, 0] as const;
+        try {
+          const byDay = await getSpendByDayForTrip(t.id);
+          const over = byDay.filter(d => d.total > cap).length;
+          return [t.id, over] as const;
+        } catch {
+          return [t.id, 0] as const;
+        }
+      }));
+      setOverCapCounts(Object.fromEntries(entries));
+
+      // store per-day spend breakdown
+      const spendEntries = await Promise.all(savedTrips.map(async (t) => {
+        try {
+          const byDay = await getSpendByDayForTrip(t.id);
+          return [t.id, byDay] as const;
+        } catch {
+          return [t.id, []] as const;
+        }
+      }));
+      setSpendByTrip(Object.fromEntries(spendEntries));
+      setTotalSpendByTrip(Object.fromEntries(spendEntries.map(([id, days]) => [id, (days as any[]).reduce((acc, d) => acc + (d.total || 0), 0)])));
     } catch (error) {
       console.error('Error loading trips:', error);
       Alert.alert('Error', 'Failed to load saved trips');
@@ -102,6 +134,7 @@ export const SavedTripsScreen = () => {
   const handleCloseActivityModal = () => {
     setIsActivityModalVisible(false);
     setSelectedTrip(null);
+    setPendingInitialDay(undefined);
   };
 
   const handleDeleteTrip = (tripId: string, tripDestination: string) => {
@@ -140,6 +173,7 @@ export const SavedTripsScreen = () => {
     setEditActivityLevel(trip.activityLevel);
     setEditSelectedGroupType(trip.groupType);
     setEditSelectedInterests(parseInterests(trip.interests));
+    setEditDailyCap((trip as any).dailySpendCap ?? undefined);
     setEditErrors({});
     setEditTouched({});
     setIsEditModalVisible(true);
@@ -191,6 +225,11 @@ export const SavedTripsScreen = () => {
           return 'Please select at least one interest';
         }
         break;
+      case 'editDailyCap':
+        if (value != null && value !== '' && (isNaN(value) || Number(value) < 0)) {
+          return 'Daily cap must be a positive number';
+        }
+        break;
       default:
         return undefined;
     }
@@ -220,6 +259,9 @@ export const SavedTripsScreen = () => {
       case 'editSelectedInterests':
         value = editSelectedInterests;
         break;
+      case 'editDailyCap':
+        value = editDailyCap;
+        break;
       default:
         return;
     }
@@ -235,7 +277,7 @@ export const SavedTripsScreen = () => {
     if (!editingTrip) return;
 
     // Mark all fields as touched
-    const allFields = ['editDestination', 'editCheckIn', 'editCheckOut', 'editBudget', 'editActivityLevel', 'editSelectedInterests'];
+    const allFields = ['editDestination', 'editCheckIn', 'editCheckOut', 'editBudget', 'editActivityLevel', 'editSelectedInterests', 'editDailyCap'];
     const newTouched = allFields.reduce((acc, field) => ({ ...acc, [field]: true }), {});
     setEditTouched(newTouched);
 
@@ -261,6 +303,9 @@ export const SavedTripsScreen = () => {
           break;
         case 'editSelectedInterests':
           value = editSelectedInterests;
+          break;
+        case 'editDailyCap':
+          value = editDailyCap;
           break;
       }
       const error = validateEditField(field, value);
@@ -288,6 +333,7 @@ export const SavedTripsScreen = () => {
         activityLevel: editActivityLevel,
         groupType: editSelectedGroupType,
         interests: JSON.stringify(editSelectedInterests),
+        dailySpendCap: (editDailyCap != null && !isNaN(editDailyCap)) ? Math.round(Number(editDailyCap)) : null,
       };
 
       await databaseService.updateTrip(editingTrip.id, tripData);
@@ -386,8 +432,16 @@ export const SavedTripsScreen = () => {
                     <Text style={styles.tripGroupType}>
                       {getGroupTypeIcon(trip.groupType)} {trip.groupType}
                     </Text>
+                    {typeof (trip as any).dailySpendCap === 'number' && (trip as any).dailySpendCap != null && (
+                      <Text style={styles.tripCap}>Cap: ${(trip as any).dailySpendCap}</Text>
+                    )}
                   </View>
                   <View style={styles.tripActions}>
+                    {overCapCounts[trip.id] > 0 && (
+                      <View style={styles.overCapBadge}>
+                        <Text style={styles.overCapBadgeText}>{overCapCounts[trip.id]} over-cap day{overCapCounts[trip.id] > 1 ? 's' : ''}</Text>
+                      </View>
+                    )}
                     <TouchableOpacity
                       style={styles.editButton}
                       onPress={() => handleEditTrip(trip)}
@@ -412,12 +466,38 @@ export const SavedTripsScreen = () => {
                   </View>
                   <View style={styles.tripDetailRow}>
                     <Text style={styles.tripDetailLabel}>💰 Budget:</Text>
-                    <Text style={styles.tripDetailValue}>${trip.budget}/day</Text>
+                    <Text style={styles.tripDetailValue}>{/* formatted async via IIFE */}
+                      {(() => {
+                        // best-effort synchronous render with symbol; will not await here
+                        return `£${trip.budget}/day`;
+                      })()}
+                    </Text>
                   </View>
+                  {typeof totalSpendByTrip[trip.id] === 'number' && (
+                    <View style={styles.tripDetailRow}>
+                      <Text style={styles.tripDetailLabel}>🧾 Total Spend:</Text>
+                      <Text style={styles.tripDetailValue}>{Math.round(totalSpendByTrip[trip.id])}</Text>
+                    </View>
+                  )}
                   <View style={styles.tripDetailRow}>
                     <Text style={styles.tripDetailLabel}>⚡ Activity:</Text>
                     <Text style={styles.tripDetailValue}>{trip.activityLevel}%</Text>
                   </View>
+                  {(spendByTrip[trip.id] && (spendByTrip[trip.id] as any).length > 0) && (
+                    <View style={{ marginTop: 6 }}>
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                        {(spendByTrip[trip.id] || []).map(({ day, total }) => {
+                          const cap = (trip as any).dailySpendCap as number | undefined;
+                          const over = typeof cap === 'number' && cap != null ? total > cap : false;
+                          return (
+                            <TouchableOpacity key={`${trip.id}-d${day}`} style={[styles.dayChip, over ? styles.dayChipOver : styles.dayChipOk]} onPress={() => { setSelectedTrip(trip); setIsActivityModalVisible(true); /* pass day via state below */ (setPendingInitialDay as any)?.(day); }}>
+                              <Text style={styles.dayChipText}>D{day}: {total.toFixed(0)}{typeof cap==='number' ? `/${cap}`: ''}</Text>
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </ScrollView>
+                    </View>
+                  )}
                 </View>
 
                 <View style={styles.interestsContainer}>
@@ -493,6 +573,7 @@ export const SavedTripsScreen = () => {
                     }}
                     placeholder="Select check-in date"
                     error={editTouched.editCheckIn ? editErrors.editCheckIn : undefined}
+                    mode="date"
                   />
                 </View>
                 <View style={styles.col}>
@@ -505,6 +586,7 @@ export const SavedTripsScreen = () => {
                     placeholder="Select check-out date"
                     error={editTouched.editCheckOut ? editErrors.editCheckOut : undefined}
                     minimumDate={editCheckIn ? new Date(editCheckIn) : undefined}
+                    mode="date"
                   />
                 </View>
               </View>
@@ -521,6 +603,21 @@ export const SavedTripsScreen = () => {
                 unit="$"
                 onBlur={() => handleEditFieldBlur('editBudget')}
                 error={editTouched.editBudget ? editErrors.editBudget : undefined}
+              />
+            </Section>
+
+            <Section title="Daily spend cap (optional)">
+              <FormInput
+                placeholder="e.g. 150"
+                keyboardType="numeric"
+                value={editDailyCap == null ? '' : String(editDailyCap)}
+                onChangeText={(text) => {
+                  const n = parseFloat(text);
+                  setEditDailyCap(isNaN(n) ? undefined : n);
+                  if (editTouched.editDailyCap) handleEditFieldBlur('editDailyCap');
+                }}
+                onBlur={() => handleEditFieldBlur('editDailyCap')}
+                error={editTouched.editDailyCap ? editErrors.editDailyCap : undefined}
               />
             </Section>
 
@@ -574,6 +671,7 @@ export const SavedTripsScreen = () => {
           <ActivityManagementScreen
             trip={selectedTrip}
             onClose={handleCloseActivityModal}
+            initialDay={pendingInitialDay}
           />
         </Modal>
       )}
@@ -707,9 +805,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
   },
+  tripCap: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 4,
+  },
   tripActions: {
     flexDirection: 'row',
     gap: 8,
+  },
+  overCapBadge: {
+    backgroundColor: '#FEE2E2',
+    borderColor: '#FCA5A5',
+    borderWidth: 1,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+  },
+  overCapBadgeText: {
+    color: '#B91C1C',
+    fontSize: 12,
+    fontWeight: '600',
   },
   editButton: {
     backgroundColor: '#F3F4F6',
@@ -745,6 +861,24 @@ const styles = StyleSheet.create({
   },
   tripDetailValue: {
     fontSize: 14,
+    color: '#111827',
+    fontWeight: '600',
+  },
+  dayChip: {
+    backgroundColor: '#E5E7EB',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    marginRight: 6,
+  },
+  dayChipOk: {
+    backgroundColor: '#DCFCE7',
+  },
+  dayChipOver: {
+    backgroundColor: '#FEE2E2',
+  },
+  dayChipText: {
+    fontSize: 12,
     color: '#111827',
     fontWeight: '600',
   },

@@ -27,11 +27,14 @@ export const SetupScreen = () => {
   const [checkOut, setCheckOut] = useState('');
   const [budget, setBudget] = useState(50);
   const [activityLevel, setActivityLevel] = useState(50);
+  const [dailySpendCap, setDailySpendCap] = useState<number | undefined>(undefined);
   const [selectedGroupType, setSelectedGroupType] = useState('couple');
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => { (async () => { try { await databaseService.init(); } catch {} })(); }, []);
 
   const interests = [
     'Adventure', 'Culture', 'Food', 'Nature', 'Nightlife', 'Relaxation',
@@ -71,6 +74,11 @@ export const SetupScreen = () => {
           return 'Please select at least one interest';
         }
         break;
+      case 'dailySpendCap':
+        if (value != null && value !== '' && (isNaN(value) || Number(value) < 0)) {
+          return 'Daily cap must be a positive number';
+        }
+        break;
       default:
         break;
     }
@@ -103,7 +111,7 @@ export const SetupScreen = () => {
   };
 
   const validateAllFields = () => {
-    const allFields = ['destination', 'checkIn', 'checkOut', 'budget', 'activityLevel', 'selectedInterests'];
+    const allFields = ['destination', 'checkIn', 'checkOut', 'budget', 'activityLevel', 'selectedInterests', 'dailySpendCap'];
     const newErrors: FormErrors = {};
 
     allFields.forEach(field => {
@@ -126,6 +134,9 @@ export const SetupScreen = () => {
           break;
         case 'selectedInterests':
           value = selectedInterests;
+          break;
+        case 'dailySpendCap':
+          value = dailySpendCap;
           break;
         default:
           return;
@@ -164,6 +175,7 @@ export const SetupScreen = () => {
         activityLevel,
         groupType: selectedGroupType,
         interests: JSON.stringify(selectedInterests),
+        dailySpendCap: (dailySpendCap != null && !isNaN(dailySpendCap)) ? Math.round(Number(dailySpendCap)) : null,
       };
 
       await databaseService.saveTrip(tripData);
@@ -180,6 +192,7 @@ export const SetupScreen = () => {
             setActivityLevel(50);
             setSelectedGroupType('couple');
             setSelectedInterests([]);
+            setDailySpendCap(undefined);
             setErrors({});
             setTouched({});
           }
@@ -239,6 +252,7 @@ export const SetupScreen = () => {
                 }}
                 placeholder="Select check-in date"
                 error={touched.checkIn ? errors.checkIn : undefined}
+                mode="date"
               />
             </View>
             <View style={styles.col}>
@@ -251,6 +265,7 @@ export const SetupScreen = () => {
                 placeholder="Select check-out date"
                 error={touched.checkOut ? errors.checkOut : undefined}
                 minimumDate={checkIn ? new Date(checkIn) : undefined}
+                mode="date"
               />
             </View>
           </View>
@@ -267,6 +282,21 @@ export const SetupScreen = () => {
             unit="£"
             onBlur={() => handleFieldBlur('budget')}
             error={touched.budget ? errors.budget : undefined}
+          />
+        </Section>
+
+        <Section title="Daily spend cap (optional)">
+          <FormInput
+            placeholder="e.g. 150"
+            keyboardType="numeric"
+            value={dailySpendCap == null ? '' : String(dailySpendCap)}
+            onChangeText={(text) => {
+              const n = parseFloat(text);
+              setDailySpendCap(isNaN(n) ? undefined : n);
+              if (touched.dailySpendCap) handleFieldBlur('dailySpendCap');
+            }}
+            onBlur={() => handleFieldBlur('dailySpendCap')}
+            error={touched.dailySpendCap ? errors.dailySpendCap : undefined}
           />
         </Section>
 
