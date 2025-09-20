@@ -584,9 +584,9 @@ export const SavedTripsScreen = () => {
                    {/* Weather Widget */}
                    <View style={styles.weatherContainer}>
                      <WeatherWidget 
-                       location={trip.destination} 
+                       destination={trip.destination} 
                        compact={true}
-                       onPress={() => handleWeatherPress(trip)}
+                       onRefresh={() => handleWeatherPress(trip)}
                      />
                    </View>
                       {(spendByTrip[trip.id] && (spendByTrip[trip.id] as any).length > 0) && (
@@ -799,7 +799,7 @@ export const SavedTripsScreen = () => {
                  <Text style={styles.modalCancelButtonText}>Close</Text>
                </TouchableOpacity>
              </View>
-             <WeatherWidget location={weatherTrip.destination} />
+             <WeatherWidget destination={weatherTrip.destination} />
            </SafeAreaView>
          </Modal>
        )}

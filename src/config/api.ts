@@ -1,30 +1,29 @@
 // API Configuration
-// Replace these with your actual API keys
+// Set your OpenWeatherMap API key here
+// Get your free API key from: https://openweathermap.org/api
 
-export const API_CONFIG = {
-  // Get your free API key from: https://openweathermap.org/api
-  OPENWEATHERMAP_API_KEY: 'YOUR_OPENWEATHERMAP_API_KEY',
-  
-  // ExchangeRate-API is free and doesn't require an API key
-  // But you can use other services like Fixer.io or CurrencyLayer if needed
-  EXCHANGE_RATE_API_URL: 'https://api.exchangerate-api.com/v4/latest',
-  
-  // Alternative paid APIs (uncomment if you want to use them)
-  // FIXER_API_KEY: 'YOUR_FIXER_API_KEY',
-  // CURRENCYLAYER_API_KEY: 'YOUR_CURRENCYLAYER_API_KEY',
-};
-
-// Helper function to get weather API key
 export const getWeatherApiKey = (): string => {
-  const key = API_CONFIG.OPENWEATHERMAP_API_KEY;
-  if (key === 'YOUR_OPENWEATHERMAP_API_KEY') {
-    console.warn('⚠️ Please set your OpenWeatherMap API key in src/config/api.ts');
-    return 'demo'; // Fallback for demo purposes
-  }
-  return key;
+  // For demo purposes, return 'demo' to use mock data
+  // Replace with your actual OpenWeatherMap API key for real weather data
+  return 'demo';
+  
+  // Example with real API key:
+  // return 'your_openweathermap_api_key_here';
 };
 
-// Helper function to get exchange rate API URL
+// Exchange rate API configuration
 export const getExchangeRateApiUrl = (): string => {
-  return API_CONFIG.EXCHANGE_RATE_API_URL;
+  // Using ExchangeRate-API (free tier: 1500 requests/month)
+  // Get your free API key from: https://exchangerate-api.com/
+  return 'https://api.exchangerate-api.com/v4/latest';
+  
+  // Alternative: Fixer.io (requires API key)
+  // return 'https://api.fixer.io/latest';
 };
+
+// Other API configurations can be added here
+export const API_ENDPOINTS = {
+  WEATHER: 'https://api.openweathermap.org/data/2.5',
+  EXCHANGE_RATE: 'https://api.exchangerate-api.com/v4/latest',
+  // Add other API endpoints as needed
+} as const;

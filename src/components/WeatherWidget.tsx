@@ -33,9 +33,10 @@ interface WeatherData {
 interface WeatherWidgetProps {
   destination: string;
   onRefresh?: () => void;
+  compact?: boolean;
 }
 
-export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRefresh }) => {
+export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRefresh, compact = false }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -266,6 +267,33 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRef
 
   if (!weatherData) return null;
 
+  // Compact mode for trip cards
+  if (compact) {
+    return (
+      <View style={styles.compactContainer}>
+        <View style={styles.compactHeader}>
+          <Ionicons name="partly-sunny" size={16} color={colors.primary.main} />
+          <Text style={styles.compactTitle}>Weather</Text>
+        </View>
+        <View style={styles.compactContent}>
+          <View style={styles.compactMain}>
+            <Text style={styles.compactTemperature}>{formatTemperature(weatherData.current.temperature)}</Text>
+            <Ionicons 
+              name={getWeatherIcon(weatherData.current.icon)} 
+              size={24} 
+              color={colors.primary.main} 
+            />
+          </View>
+          <Text style={styles.compactCondition}>{weatherData.current.condition}</Text>
+          <View style={styles.compactDetails}>
+            <Text style={styles.compactDetailText}>{weatherData.current.humidity}% humidity</Text>
+            <Text style={styles.compactDetailText}>{weatherData.current.windSpeed} km/h wind</Text>
+          </View>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
@@ -486,6 +514,53 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   precipitationText: {
+    fontSize: typography.fontSize.xs,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.text.secondary,
+  },
+  // Compact mode styles
+  compactContainer: {
+    backgroundColor: colors.surface.secondary,
+    borderRadius: borderRadius.md,
+    padding: spacing.md,
+    marginTop: spacing.sm,
+  },
+  compactHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  compactTitle: {
+    fontSize: typography.fontSize.sm,
+    fontFamily: typography.fontFamily.semibold,
+    color: colors.text.primary,
+    marginLeft: spacing.xs,
+  },
+  compactContent: {
+    alignItems: 'center',
+  },
+  compactMain: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+  },
+  compactTemperature: {
+    fontSize: typography.fontSize.xl,
+    fontFamily: typography.fontFamily.bold,
+    color: colors.text.primary,
+    marginRight: spacing.sm,
+  },
+  compactCondition: {
+    fontSize: typography.fontSize.sm,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.text.secondary,
+    marginBottom: spacing.xs,
+  },
+  compactDetails: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  compactDetailText: {
     fontSize: typography.fontSize.xs,
     fontFamily: typography.fontFamily.regular,
     color: colors.text.secondary,
