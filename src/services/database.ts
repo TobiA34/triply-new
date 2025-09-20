@@ -108,23 +108,42 @@ class DatabaseService {
       );
     `;
 
-    const createPollsTable = `
-      CREATE TABLE IF NOT EXISTS polls (
-        id TEXT PRIMARY KEY,
-        tripId TEXT NOT NULL,
-        day INTEGER NOT NULL,
-        time TEXT NOT NULL,
-        options TEXT NOT NULL,
-        votes TEXT NOT NULL,
-        createdAt TEXT NOT NULL,
-        updatedAt TEXT NOT NULL,
-        FOREIGN KEY (tripId) REFERENCES trips (id) ON DELETE CASCADE
-      );
-    `;
+     const createPollsTable = `
+       CREATE TABLE IF NOT EXISTS polls (
+         id TEXT PRIMARY KEY,
+         tripId TEXT NOT NULL,
+         day INTEGER NOT NULL,
+         time TEXT NOT NULL,
+         options TEXT NOT NULL,
+         votes TEXT NOT NULL,
+         createdAt TEXT NOT NULL,
+         updatedAt TEXT NOT NULL,
+         FOREIGN KEY (tripId) REFERENCES trips (id) ON DELETE CASCADE
+       );
+     `;
 
-    await this.db.execAsync(createTripsTable);
-    await this.db.execAsync(createActivitiesTable);
-    await this.db.execAsync(createPollsTable);
+     const createExpensesTable = `
+       CREATE TABLE IF NOT EXISTS expenses (
+         id TEXT PRIMARY KEY,
+         tripId TEXT NOT NULL,
+         activityId TEXT,
+         amount REAL NOT NULL,
+         description TEXT NOT NULL,
+         category TEXT NOT NULL,
+         date TEXT NOT NULL,
+         receiptUri TEXT,
+         location TEXT,
+         tags TEXT NOT NULL,
+         createdAt TEXT NOT NULL,
+         updatedAt TEXT NOT NULL,
+         FOREIGN KEY (tripId) REFERENCES trips (id) ON DELETE CASCADE
+       );
+     `;
+
+     await this.db.execAsync(createTripsTable);
+     await this.db.execAsync(createActivitiesTable);
+     await this.db.execAsync(createPollsTable);
+     await this.db.execAsync(createExpensesTable);
 
     // best-effort migrations for existing installations (ALTER TABLE will throw if column exists)
     try { await this.db!.execAsync("ALTER TABLE trips ADD COLUMN dailySpendCap INTEGER"); } catch {}

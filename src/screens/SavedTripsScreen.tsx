@@ -20,6 +20,8 @@ import { DatePicker } from '../components/DatePicker';
 import { GroupTypeSelector } from '../components/GroupTypeSelector';
 import { PreferenceSlider } from '../components/PreferenceSlider';
 import { ActivityManagementScreen } from './ActivityManagementScreen';
+import { WeatherWidget } from '../components/WeatherWidget';
+import { ExpenseTracker } from '../components/ExpenseTracker';
 import { formatDate, formatDateRange, formatRelativeDate } from '../utils/dateFormatting';
 import { formatCurrency } from '../services/currency';
 
@@ -54,6 +56,12 @@ export const SavedTripsScreen = () => {
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
   const [isActivityModalVisible, setIsActivityModalVisible] = useState(false);
   const [pendingInitialDay, setPendingInitialDay] = useState<number | undefined>(undefined);
+  
+  // Weather and expense tracking state
+  const [isWeatherModalVisible, setIsWeatherModalVisible] = useState(false);
+  const [isExpenseModalVisible, setIsExpenseModalVisible] = useState(false);
+  const [weatherTrip, setWeatherTrip] = useState<Trip | null>(null);
+  const [expenseTrip, setExpenseTrip] = useState<Trip | null>(null);
 
   // Define interests array
   const interests = [
@@ -135,6 +143,26 @@ export const SavedTripsScreen = () => {
     setIsActivityModalVisible(false);
     setSelectedTrip(null);
     setPendingInitialDay(undefined);
+  };
+
+  const handleWeatherPress = (trip: Trip) => {
+    setWeatherTrip(trip);
+    setIsWeatherModalVisible(true);
+  };
+
+  const handleCloseWeatherModal = () => {
+    setIsWeatherModalVisible(false);
+    setWeatherTrip(null);
+  };
+
+  const handleExpensePress = (trip: Trip) => {
+    setExpenseTrip(trip);
+    setIsExpenseModalVisible(true);
+  };
+
+  const handleCloseExpenseModal = () => {
+    setIsExpenseModalVisible(false);
+    setExpenseTrip(null);
   };
 
   const handleDeleteTrip = (tripId: string, tripDestination: string) => {
@@ -436,53 +464,74 @@ export const SavedTripsScreen = () => {
                       <Text style={styles.tripCap}>Cap: ${(trip as any).dailySpendCap}</Text>
                     )}
                   </View>
-                  <View style={styles.tripActions}>
-                    {overCapCounts[trip.id] > 0 && (
-                      <View style={styles.overCapBadge}>
-                        <Text style={styles.overCapBadgeText}>{overCapCounts[trip.id]} over-cap day{overCapCounts[trip.id] > 1 ? 's' : ''}</Text>
-                      </View>
-                    )}
-                    <TouchableOpacity
-                      style={styles.editButton}
-                      onPress={() => handleEditTrip(trip)}
-                    >
-                      <Text style={styles.editButtonText}>✏️</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.deleteButton}
-                      onPress={() => handleDeleteTrip(trip.id, trip.destination)}
-                    >
-                      <Text style={styles.deleteButtonText}>🗑️</Text>
-                    </TouchableOpacity>
-                  </View>
+                   <View style={styles.tripActions}>
+                     {overCapCounts[trip.id] > 0 && (
+                       <View style={styles.overCapBadge}>
+                         <Text style={styles.overCapBadgeText}>{overCapCounts[trip.id]} over-cap day{overCapCounts[trip.id] > 1 ? 's' : ''}</Text>
+                       </View>
+                     )}
+                     <TouchableOpacity
+                       style={styles.actionButton}
+                       onPress={() => handleWeatherPress(trip)}
+                     >
+                       <Text style={styles.actionButtonText}>🌤️</Text>
+                     </TouchableOpacity>
+                     <TouchableOpacity
+                       style={styles.actionButton}
+                       onPress={() => handleExpensePress(trip)}
+                     >
+                       <Text style={styles.actionButtonText}>💳</Text>
+                     </TouchableOpacity>
+                     <TouchableOpacity
+                       style={styles.actionButton}
+                       onPress={() => handleEditTrip(trip)}
+                     >
+                       <Text style={styles.actionButtonText}>✏️</Text>
+                     </TouchableOpacity>
+                     <TouchableOpacity
+                       style={styles.actionButton}
+                       onPress={() => handleDeleteTrip(trip.id, trip.destination)}
+                     >
+                       <Text style={styles.actionButtonText}>🗑️</Text>
+                     </TouchableOpacity>
+                   </View>
                 </View>
                 
-                <View style={styles.tripDetails}>
-                  <View style={styles.tripDetailRow}>
-                    <Text style={styles.tripDetailLabel}>📅 Dates:</Text>
-                    <Text style={styles.tripDetailValue}>
-                      {formatDateRange(trip.checkIn, trip.checkOut)}
-                    </Text>
-                  </View>
-                  <View style={styles.tripDetailRow}>
-                    <Text style={styles.tripDetailLabel}>💰 Budget:</Text>
-                    <Text style={styles.tripDetailValue}>{/* formatted async via IIFE */}
-                      {(() => {
-                        // best-effort synchronous render with symbol; will not await here
-                        return `£${trip.budget}/day`;
-                      })()}
-                    </Text>
-                  </View>
-                  {typeof totalSpendByTrip[trip.id] === 'number' && (
-                    <View style={styles.tripDetailRow}>
-                      <Text style={styles.tripDetailLabel}>🧾 Total Spend:</Text>
-                      <Text style={styles.tripDetailValue}>{Math.round(totalSpendByTrip[trip.id])}</Text>
-                    </View>
-                  )}
-                  <View style={styles.tripDetailRow}>
-                    <Text style={styles.tripDetailLabel}>⚡ Activity:</Text>
-                    <Text style={styles.tripDetailValue}>{trip.activityLevel}%</Text>
-                  </View>
+                 <View style={styles.tripDetails}>
+                   <View style={styles.tripDetailRow}>
+                     <Text style={styles.tripDetailLabel}>📅 Dates:</Text>
+                     <Text style={styles.tripDetailValue}>
+                       {formatDateRange(trip.checkIn, trip.checkOut)}
+                     </Text>
+                   </View>
+                   <View style={styles.tripDetailRow}>
+                     <Text style={styles.tripDetailLabel}>💰 Budget:</Text>
+                     <Text style={styles.tripDetailValue}>{/* formatted async via IIFE */}
+                       {(() => {
+                         // best-effort synchronous render with symbol; will not await here
+                         return `£${trip.budget}/day`;
+                       })()}
+                     </Text>
+                   </View>
+                   {typeof totalSpendByTrip[trip.id] === 'number' && (
+                     <View style={styles.tripDetailRow}>
+                       <Text style={styles.tripDetailLabel}>🧾 Total Spend:</Text>
+                       <Text style={styles.tripDetailValue}>{Math.round(totalSpendByTrip[trip.id])}</Text>
+                     </View>
+                   )}
+                   <View style={styles.tripDetailRow}>
+                     <Text style={styles.tripDetailLabel}>⚡ Activity:</Text>
+                     <Text style={styles.tripDetailValue}>{trip.activityLevel}%</Text>
+                   </View>
+                   
+                   {/* Weather Widget */}
+                   <View style={styles.weatherContainer}>
+                     <WeatherWidget 
+                       location={trip.destination} 
+                       compact={true}
+                       onPress={() => handleWeatherPress(trip)}
+                     />
+                   </View>
                   {(spendByTrip[trip.id] && (spendByTrip[trip.id] as any).length > 0) && (
                     <View style={{ marginTop: 6 }}>
                       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
@@ -661,23 +710,51 @@ export const SavedTripsScreen = () => {
         </SafeAreaView>
       </Modal>
 
-      {/* Activity Management Modal */}
-      {selectedTrip && (
-        <Modal
-          visible={isActivityModalVisible}
-          animationType="slide"
-          presentationStyle="pageSheet"
-        >
-          <ActivityManagementScreen
-            trip={selectedTrip}
-            onClose={handleCloseActivityModal}
-            initialDay={pendingInitialDay}
-          />
-        </Modal>
-      )}
-    </SafeAreaView>
-  );
-};
+       {/* Activity Management Modal */}
+       {selectedTrip && (
+         <Modal
+           visible={isActivityModalVisible}
+           animationType="slide"
+           presentationStyle="pageSheet"
+         >
+           <ActivityManagementScreen
+             trip={selectedTrip}
+             onClose={handleCloseActivityModal}
+             initialDay={pendingInitialDay}
+           />
+         </Modal>
+       )}
+
+       {/* Weather Modal */}
+       {weatherTrip && (
+         <Modal
+           visible={isWeatherModalVisible}
+           animationType="slide"
+           presentationStyle="pageSheet"
+         >
+           <SafeAreaView style={styles.modalContainer}>
+             <View style={styles.modalHeader}>
+               <Text style={styles.modalTitle}>Weather for {weatherTrip.destination}</Text>
+               <TouchableOpacity onPress={handleCloseWeatherModal}>
+                 <Text style={styles.modalCancelButtonText}>Close</Text>
+               </TouchableOpacity>
+             </View>
+             <WeatherWidget location={weatherTrip.destination} />
+           </SafeAreaView>
+         </Modal>
+       )}
+
+       {/* Expense Tracker Modal */}
+       {expenseTrip && (
+         <ExpenseTracker
+           tripId={expenseTrip.id}
+           visible={isExpenseModalVisible}
+           onClose={handleCloseExpenseModal}
+         />
+       )}
+     </SafeAreaView>
+   );
+ };
 
 const styles = StyleSheet.create({
   container: {
@@ -827,24 +904,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-  editButton: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  editButtonText: {
-    fontSize: 16,
-  },
-  deleteButton: {
-    backgroundColor: '#FEF2F2',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  deleteButtonText: {
-    fontSize: 16,
-  },
+   actionButton: {
+     backgroundColor: '#F3F4F6',
+     paddingHorizontal: 8,
+     paddingVertical: 6,
+     borderRadius: 6,
+     marginLeft: 4,
+   },
+   actionButtonText: {
+     fontSize: 14,
+   },
+   editButton: {
+     backgroundColor: '#F3F4F6',
+     paddingHorizontal: 12,
+     paddingVertical: 8,
+     borderRadius: 6,
+   },
+   editButtonText: {
+     fontSize: 16,
+   },
+   deleteButton: {
+     backgroundColor: '#FEF2F2',
+     paddingHorizontal: 12,
+     paddingVertical: 8,
+     borderRadius: 6,
+   },
+   deleteButtonText: {
+     fontSize: 16,
+   },
+   weatherContainer: {
+     marginTop: 12,
+   },
   tripDetails: {
     marginBottom: 12,
   },
