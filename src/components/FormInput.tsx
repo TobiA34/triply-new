@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet } from 'react-native';
+import { colors, typography, spacing, borderRadius } from '../theme';
 
 interface FormInputProps {
   label?: string;
@@ -9,6 +10,9 @@ interface FormInputProps {
   onBlur?: () => void;
   error?: string;
   icon?: React.ReactNode;
+  multiline?: boolean;
+  numberOfLines?: number;
+  keyboardType?: 'default' | 'numeric' | 'email-address' | 'phone-pad';
 }
 
 export const FormInput: React.FC<FormInputProps> = ({
@@ -18,19 +22,26 @@ export const FormInput: React.FC<FormInputProps> = ({
   onChangeText,
   onBlur,
   error,
-  icon
+  icon,
+  multiline = false,
+  numberOfLines = 1,
+  keyboardType = 'default',
 }) => {
   return (
     <View style={styles.container}>
       {label && <Text style={styles.label}>{label}</Text>}
       <View style={[styles.inputContainer, error && styles.inputError]}>
         <TextInput
-          style={styles.input}
+          style={[styles.input, multiline && styles.multilineInput]}
           placeholder={placeholder}
           value={value}
           onChangeText={onChangeText}
           onBlur={onBlur}
-          placeholderTextColor="#999"
+          placeholderTextColor={colors.text.tertiary}
+          multiline={multiline}
+          numberOfLines={numberOfLines}
+          textAlignVertical={multiline ? 'top' : 'center'}
+          keyboardType={keyboardType}
         />
         {icon && <View style={styles.icon}>{icon}</View>}
       </View>
@@ -41,40 +52,52 @@ export const FormInput: React.FC<FormInputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: 16,
+    marginBottom: spacing.lg,
     width: '100%',
   },
   label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 8,
-    paddingHorizontal: 4,
+    fontSize: typography.fontSize.sm,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+    lineHeight: typography.lineHeight.sm,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
-    borderRadius: 12,
-    backgroundColor: '#FFF',
+    borderColor: colors.border.light,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surface.primary,
     width: '100%',
+    minHeight: 48,
   },
   input: {
     flex: 1,
-    padding: 16,
-    fontSize: 16,
-    color: '#333',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    fontSize: typography.fontSize.base,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.text.primary,
+    lineHeight: typography.lineHeight.base,
+  },
+  multilineInput: {
+    paddingTop: spacing.md,
+    minHeight: 80,
   },
   icon: {
-    paddingRight: 16,
+    paddingRight: spacing.lg,
+    paddingTop: 0,
   },
   inputError: {
-    borderColor: '#EF4444',
+    borderColor: colors.status.error,
+    borderWidth: 2,
   },
   errorText: {
-    color: '#EF4444',
-    fontSize: 12,
-    marginTop: 4,
+    color: colors.status.error,
+    fontSize: typography.fontSize.xs,
+    fontFamily: typography.fontFamily.medium,
+    marginTop: spacing.xs,
+    lineHeight: typography.lineHeight.xs,
   },
 });

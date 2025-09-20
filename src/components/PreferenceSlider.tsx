@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import Slider from '@react-native-community/slider';
+import { colors, typography, spacing, borderRadius, shadows } from '../theme';
 
 interface PreferenceSliderProps {
   label: string;
@@ -12,6 +13,7 @@ interface PreferenceSliderProps {
   unit?: string;
   onBlur?: () => void;
   error?: string;
+  description?: string;
 }
 
 export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
@@ -24,14 +26,23 @@ export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
   unit = '',
   onBlur,
   error,
+  description,
 }) => {
-  // Library slider handles visuals; we just display label/value
+  const percentage = ((value - min) / (max - min)) * 100;
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={styles.value}>{value}{unit}</Text>
+        <View style={styles.labelContainer}>
+          <Text style={styles.label}>{label}</Text>
+          {description && <Text style={styles.description}>{description}</Text>}
+        </View>
+        <View style={styles.valueContainer}>
+          <Text style={styles.value}>{value}{unit}</Text>
+          <View style={styles.percentageBar}>
+            <View style={[styles.percentageFill, { width: `${percentage}%` }]} />
+          </View>
+        </View>
       </View>
       <View style={styles.sliderContainer}>
         <Slider
@@ -40,9 +51,9 @@ export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
           maximumValue={max}
           step={step}
           value={value}
-          minimumTrackTintColor="#4285F4"
-          maximumTrackTintColor="#E5E7EB"
-          thumbTintColor="#4285F4"
+          minimumTrackTintColor={colors.primary.main}
+          maximumTrackTintColor={colors.border.light}
+          thumbTintColor={colors.primary.main}
           onValueChange={(v) => onValueChange(v)}
           onSlidingComplete={() => onBlur && onBlur()}
         />
@@ -54,26 +65,56 @@ export const PreferenceSlider: React.FC<PreferenceSliderProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: colors.surface.primary,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
     width: '100%',
+    ...shadows.sm,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
+    alignItems: 'flex-start',
+    marginBottom: spacing.lg,
+  },
+  labelContainer: {
+    flex: 1,
+    marginRight: spacing.md,
   },
   label: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
+    fontSize: typography.fontSize.base,
+    fontFamily: typography.fontFamily.semibold,
+    color: colors.text.primary,
+    lineHeight: typography.lineHeight.base,
+  },
+  description: {
+    fontSize: typography.fontSize.sm,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.text.secondary,
+    lineHeight: typography.lineHeight.sm,
+    marginTop: spacing.xs,
+  },
+  valueContainer: {
+    alignItems: 'flex-end',
   },
   value: {
-    fontSize: 14,
-    color: '#4285F4',
-    fontWeight: '500',
+    fontSize: typography.fontSize.lg,
+    fontFamily: typography.fontFamily.bold,
+    color: colors.primary.main,
+    lineHeight: typography.lineHeight.lg,
+  },
+  percentageBar: {
+    width: 60,
+    height: 4,
+    backgroundColor: colors.border.light,
+    borderRadius: borderRadius.sm,
+    marginTop: spacing.xs,
+    overflow: 'hidden',
+  },
+  percentageFill: {
+    height: '100%',
+    backgroundColor: colors.primary.main,
+    borderRadius: borderRadius.sm,
   },
   sliderContainer: {
     height: 40,
@@ -84,8 +125,10 @@ const styles = StyleSheet.create({
     height: 40,
   },
   errorText: {
-    color: '#EF4444',
-    fontSize: 12,
-    marginTop: 4,
+    color: colors.status.error,
+    fontSize: typography.fontSize.xs,
+    fontFamily: typography.fontFamily.medium,
+    marginTop: spacing.sm,
+    lineHeight: typography.lineHeight.xs,
   },
 });

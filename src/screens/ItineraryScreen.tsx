@@ -306,7 +306,7 @@ export const ItineraryScreen = () => {
                 placeholder="Ask me about activities, restaurants, or attractions..."
                 value={userMessage}
                 onChangeText={setUserMessage}
-                multiline
+                multiline={true}
               />
               <TouchableOpacity
                 style={styles.sendButton}

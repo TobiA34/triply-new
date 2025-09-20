@@ -375,7 +375,7 @@ export const SocialSharing: React.FC<SocialSharingProps> = ({
                   placeholder="Share your thoughts about this trip..."
                   value={newComment}
                   onChangeText={setNewComment}
-                  multiline
+                  multiline={true}
                   maxLength={500}
                 />
                 <TouchableOpacity

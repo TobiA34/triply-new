@@ -63,6 +63,17 @@ export const formatTime = (timeString: string): string => {
   return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
 };
 
+export const formatDateTime = (dateTimeString: string): string => {
+  const date = new Date(dateTimeString);
+  const dateStr = date.toLocaleDateString('en-GB', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+  const timeStr = formatTime(date.toTimeString().split(' ')[0]);
+  return `${dateStr} ${timeStr}`;
+};
+
 export const isToday = (dateString: string): boolean => {
   const date = new Date(dateString);
   const today = new Date();

@@ -8,15 +8,21 @@ import {
   Alert,
   ActivityIndicator,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { databaseService } from '../services/database';
 import { Section } from '../components/Section';
 import { FormInput } from '../components/FormInput';
+import { LocationSearchInput } from '../components/LocationSearchInput';
 import { DatePicker } from '../components/DatePicker';
 import { GroupTypeSelector } from '../components/GroupTypeSelector';
 import { PreferenceSlider } from '../components/PreferenceSlider';
 import { Chip } from '../components/Chip';
+import { WeatherWidget } from '../components/WeatherWidget';
+import { CurrencyConverter } from '../components/CurrencyConverter';
 import { useCurrency } from '../contexts/CurrencyContext';
+import { colors, typography, spacing, borderRadius, shadows } from '../theme';
+import { Location } from '../data/locations';
 
 interface FormErrors {
   [key: string]: string;
@@ -25,6 +31,7 @@ interface FormErrors {
 export const SetupScreen = () => {
   const { formatAmount, getCurrencySymbol } = useCurrency();
   const [destination, setDestination] = useState('');
+  const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
   const [budget, setBudget] = useState(50);
@@ -85,6 +92,19 @@ export const SetupScreen = () => {
         break;
     }
     return undefined;
+  };
+
+  const handleLocationSelect = (location: Location) => {
+    setSelectedLocation(location);
+    // The LocationSearchInput will handle setting the display text
+    // We just need to clear any existing destination error
+    if (errors.destination) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors.destination;
+        return newErrors;
+      });
+    }
   };
 
   const handleFieldBlur = (field: string) => {
@@ -224,47 +244,79 @@ export const SetupScreen = () => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+      <ScrollView 
+        style={styles.scrollView} 
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
-          <Text style={styles.title}>Triply Itinerary Helper</Text>
-          <Text style={styles.subtitle}>Plan your perfect trip in minutes</Text>
+          <Text style={styles.title}>Plan Your Perfect Trip</Text>
+          <Text style={styles.subtitle}>Create a personalized itinerary in just a few steps</Text>
         </View>
 
-        <Section title="Where are you going?">
-          <FormInput
-            placeholder="Enter destination"
+        <Section
+          title="Destination"
+          subtitle="Where would you like to go?"
+        >
+          <LocationSearchInput
+            placeholder="Search for a city or country"
             value={destination}
             onChangeText={(text) => {
               setDestination(text);
+              setSelectedLocation(null); // Clear selected location when typing
               if (touched.destination) handleFieldBlur('destination');
             }}
             onBlur={() => handleFieldBlur('destination')}
+            onLocationSelect={handleLocationSelect}
             error={touched.destination ? errors.destination : undefined}
           />
+          {selectedLocation && (
+            <View style={styles.selectedLocationContainer}>
+              <View style={styles.selectedLocationBadge}>
+                <Ionicons 
+                  name={selectedLocation.type === 'city' ? 'location' : 'globe'} 
+                  size={16} 
+                  color={colors.primary.main} 
+                />
+                <Text style={styles.selectedLocationText}>
+                  {selectedLocation.type === 'city' ? 'City' : 'Country'} selected
+                </Text>
+              </View>
+            </View>
+          )}
         </Section>
 
-        <Section title="When are you traveling?">
-          <View style={styles.row}>
-            <View style={styles.col}>
+        {/* Weather Widget */}
+        <WeatherWidget destination={destination} />
+
+        {/* Currency Converter */}
+        <CurrencyConverter destination={destination} />
+
+        <Section 
+          title="Travel Dates" 
+          subtitle="When are you planning to travel?"
+        >
+          <View style={styles.dateRow}>
+            <View style={styles.dateColumn}>
               <DatePicker
                 value={checkIn}
                 onChange={(date) => {
                   setCheckIn(date);
                   if (touched.checkIn) handleFieldBlur('checkIn');
                 }}
-                placeholder="Select check-in date"
+                placeholder="Check-in date"
                 error={touched.checkIn ? errors.checkIn : undefined}
                 mode="date"
               />
             </View>
-            <View style={styles.col}>
+            <View style={styles.dateColumn}>
               <DatePicker
                 value={checkOut}
                 onChange={(date) => {
                   setCheckOut(date);
                   if (touched.checkOut) handleFieldBlur('checkOut');
                 }}
-                placeholder="Select check-out date"
+                placeholder="Check-out date"
                 error={touched.checkOut ? errors.checkOut : undefined}
                 minimumDate={checkIn ? new Date(checkIn) : undefined}
                 mode="date"
@@ -273,23 +325,25 @@ export const SetupScreen = () => {
           </View>
         </Section>
 
-        <Section title="What's your budget?">
+        <Section 
+          title="Budget Planning" 
+          subtitle="Set your spending expectations"
+        >
           <PreferenceSlider
             value={budget}
             onValueChange={setBudget}
             min={0}
             max={1000}
             step={10}
-            label="Budget"
+            label="Total Budget"
             unit={getCurrencySymbol()}
+            description="Your overall trip budget"
             onBlur={() => handleFieldBlur('budget')}
             error={touched.budget ? errors.budget : undefined}
           />
-        </Section>
-
-        <Section title="Daily spend cap (optional)">
+          
           <FormInput
-            placeholder={`e.g. 150 (${getCurrencySymbol()})`}
+            placeholder={`Daily limit (e.g. 150 ${getCurrencySymbol()})`}
             keyboardType="numeric"
             value={dailySpendCap == null ? '' : String(dailySpendCap)}
             onChangeText={(text) => {
@@ -302,7 +356,10 @@ export const SetupScreen = () => {
           />
         </Section>
 
-        <Section title="How active do you want to be?">
+        <Section 
+          title="Activity Level" 
+          subtitle="How active do you want to be?"
+        >
           <PreferenceSlider
             value={activityLevel}
             onValueChange={setActivityLevel}
@@ -311,19 +368,26 @@ export const SetupScreen = () => {
             step={5}
             label="Activity Level"
             unit="%"
+            description="From relaxed to adventure-packed"
             onBlur={() => handleFieldBlur('activityLevel')}
             error={touched.activityLevel ? errors.activityLevel : undefined}
           />
         </Section>
 
-        <Section title="Who's traveling?">
+        <Section 
+          title="Travel Group" 
+          subtitle="Who's coming along?"
+        >
           <GroupTypeSelector
             selectedGroupType={selectedGroupType}
             onGroupTypeChange={setSelectedGroupType}
           />
         </Section>
 
-        <Section title="What interests you?">
+        <Section 
+          title="Interests" 
+          subtitle="What activities interest you most?"
+        >
           <View style={styles.interestsContainer}>
             {interests.map((interest) => (
               <Chip
@@ -331,6 +395,7 @@ export const SetupScreen = () => {
                 label={interest}
                 selected={selectedInterests.includes(interest)}
                 onPress={() => handleInterestToggle(interest)}
+                variant="outline"
               />
             ))}
           </View>
@@ -345,9 +410,9 @@ export const SetupScreen = () => {
           disabled={isLoading}
         >
           {isLoading ? (
-            <ActivityIndicator color="#FFFFFF" />
+            <ActivityIndicator color={colors.primary.contrastText} />
           ) : (
-            <Text style={styles.saveButtonText}>Save Trip</Text>
+            <Text style={styles.saveButtonText}>Create My Trip</Text>
           )}
         </TouchableOpacity>
       </ScrollView>
@@ -358,71 +423,92 @@ export const SetupScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: colors.background.paper,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 20,
+    padding: spacing['3xl'],
+    paddingBottom: spacing['6xl'],
   },
   header: {
-    marginBottom: 32,
+    marginBottom: spacing['5xl'],
+    alignItems: 'center',
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#111827',
-    marginBottom: 8,
+    fontSize: typography.fontSize['4xl'],
+    fontFamily: typography.fontFamily.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+    lineHeight: typography.lineHeight['4xl'],
+    letterSpacing: typography.letterSpacing.tight,
   },
   subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
+    fontSize: typography.fontSize.lg,
+    fontFamily: typography.fontFamily.regular,
+    color: colors.text.secondary,
+    textAlign: 'center',
+    lineHeight: typography.lineHeight.lg,
+    maxWidth: 280,
   },
-  content: {
-    gap: 8,
-  },
-  row: {
+  dateRow: {
     flexDirection: 'row',
-    gap: 12,
+    gap: spacing.md,
   },
-  col: {
+  dateColumn: {
     flex: 1,
   },
   interestsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 8,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   errorText: {
-    color: '#EF4444',
-    fontSize: 12,
-    marginTop: 4,
+    color: colors.status.error,
+    fontSize: typography.fontSize.xs,
+    fontFamily: typography.fontFamily.medium,
+    marginTop: spacing.xs,
+    lineHeight: typography.lineHeight.xs,
   },
   saveButton: {
-    backgroundColor: '#4285F4',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
+    backgroundColor: colors.primary.main,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing['3xl'],
+    borderRadius: borderRadius.xl,
     alignItems: 'center',
-    marginTop: 24,
+    marginTop: spacing['4xl'],
+    ...shadows.md,
   },
   saveButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: colors.text.disabled,
+    ...shadows.sm,
   },
   saveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    color: colors.primary.contrastText,
+    fontSize: typography.fontSize.lg,
+    fontFamily: typography.fontFamily.semibold,
+    lineHeight: typography.lineHeight.lg,
   },
-  dateInputContainer: {
-    flex: 1,
+  selectedLocationContainer: {
+    marginTop: spacing.md,
   },
-  dateLabel: {
-    fontSize: 16,
-    fontWeight: '500',
-    color: '#333',
-    marginBottom: 8,
+  selectedLocationBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary.main + '20',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    alignSelf: 'flex-start',
+  },
+  selectedLocationText: {
+    fontSize: typography.fontSize.sm,
+    fontFamily: typography.fontFamily.medium,
+    color: colors.primary.main,
+    marginLeft: spacing.sm,
+    lineHeight: typography.lineHeight.sm,
   },
 });
