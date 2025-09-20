@@ -22,14 +22,17 @@ import { PreferenceSlider } from '../components/PreferenceSlider';
 import { ActivityManagementScreen } from './ActivityManagementScreen';
 import { WeatherWidget } from '../components/WeatherWidget';
 import { ExpenseTracker } from '../components/ExpenseTracker';
+import { PackingAssistant } from '../components/PackingAssistant';
+import { SocialSharing } from '../components/SocialSharing';
 import { formatDate, formatDateRange, formatRelativeDate } from '../utils/dateFormatting';
-import { formatCurrency } from '../services/currency';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 interface FormErrors {
   [key: string]: string;
 }
 
 export const SavedTripsScreen = () => {
+  const { formatAmount, getCurrencySymbol } = useCurrency();
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -62,6 +65,13 @@ export const SavedTripsScreen = () => {
   const [isExpenseModalVisible, setIsExpenseModalVisible] = useState(false);
   const [weatherTrip, setWeatherTrip] = useState<Trip | null>(null);
   const [expenseTrip, setExpenseTrip] = useState<Trip | null>(null);
+
+  // Packing and social sharing state
+  const [isPackingModalVisible, setIsPackingModalVisible] = useState(false);
+  const [isSocialModalVisible, setIsSocialModalVisible] = useState(false);
+  const [packingTrip, setPackingTrip] = useState<Trip | null>(null);
+  const [socialTrip, setSocialTrip] = useState<Trip | null>(null);
+
 
   // Define interests array
   const interests = [
@@ -163,6 +173,26 @@ export const SavedTripsScreen = () => {
   const handleCloseExpenseModal = () => {
     setIsExpenseModalVisible(false);
     setExpenseTrip(null);
+  };
+
+  const handlePackingPress = (trip: Trip) => {
+    setPackingTrip(trip);
+    setIsPackingModalVisible(true);
+  };
+
+  const handleClosePackingModal = () => {
+    setIsPackingModalVisible(false);
+    setPackingTrip(null);
+  };
+
+  const handleSocialPress = (trip: Trip) => {
+    setSocialTrip(trip);
+    setIsSocialModalVisible(true);
+  };
+
+  const handleCloseSocialModal = () => {
+    setIsSocialModalVisible(false);
+    setSocialTrip(null);
   };
 
   const handleDeleteTrip = (tripId: string, tripDestination: string) => {
@@ -455,49 +485,77 @@ export const SavedTripsScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.tripHeader}>
-                  <View style={styles.tripTitleContainer}>
-                    <Text style={styles.tripTitle}>{trip.destination}</Text>
-                    <Text style={styles.tripGroupType}>
-                      {getGroupTypeIcon(trip.groupType)} {trip.groupType}
-                    </Text>
-                    {typeof (trip as any).dailySpendCap === 'number' && (trip as any).dailySpendCap != null && (
-                      <Text style={styles.tripCap}>Cap: ${(trip as any).dailySpendCap}</Text>
-                    )}
-                  </View>
-                   <View style={styles.tripActions}>
+                  <View style={styles.tripActionsContainer}>
+                    <Text style={styles.tripName}>{trip.destination}</Text>
+                    <View style={styles.tripActions}>
                      {overCapCounts[trip.id] > 0 && (
                        <View style={styles.overCapBadge}>
                          <Text style={styles.overCapBadgeText}>{overCapCounts[trip.id]} over-cap day{overCapCounts[trip.id] > 1 ? 's' : ''}</Text>
                        </View>
                      )}
-                     <TouchableOpacity
-                       style={styles.actionButton}
-                       onPress={() => handleWeatherPress(trip)}
-                     >
-                       <Text style={styles.actionButtonText}>🌤️</Text>
-                     </TouchableOpacity>
-                     <TouchableOpacity
-                       style={styles.actionButton}
-                       onPress={() => handleExpensePress(trip)}
-                     >
-                       <Text style={styles.actionButtonText}>💳</Text>
-                     </TouchableOpacity>
-                     <TouchableOpacity
-                       style={styles.actionButton}
-                       onPress={() => handleEditTrip(trip)}
-                     >
-                       <Text style={styles.actionButtonText}>✏️</Text>
-                     </TouchableOpacity>
-                     <TouchableOpacity
-                       style={styles.actionButton}
-                       onPress={() => handleDeleteTrip(trip.id, trip.destination)}
-                     >
-                       <Text style={styles.actionButtonText}>🗑️</Text>
-                     </TouchableOpacity>
-                   </View>
+                     
+                     {/* First row of 3 icons */}
+                     <View style={styles.actionRow}>
+                       <TouchableOpacity
+                         style={styles.actionButton}
+                         onPress={() => handleWeatherPress(trip)}
+                       >
+                         <Text style={styles.actionButtonText}>🌤️</Text>
+                       </TouchableOpacity>
+                       <TouchableOpacity
+                         style={styles.actionButton}
+                         onPress={() => handleExpensePress(trip)}
+                       >
+                         <Text style={styles.actionButtonText}>💳</Text>
+                       </TouchableOpacity>
+                       <TouchableOpacity
+                         style={styles.actionButton}
+                         onPress={() => handlePackingPress(trip)}
+                       >
+                         <Text style={styles.actionButtonText}>🎒</Text>
+                       </TouchableOpacity>
+                     </View>
+                     
+                     {/* Second row of 3 icons */}
+                     <View style={styles.actionRow}>
+                       <TouchableOpacity
+                         style={styles.actionButton}
+                         onPress={() => handleSocialPress(trip)}
+                       >
+                         <Text style={styles.actionButtonText}>🤝</Text>
+                       </TouchableOpacity>
+                       <TouchableOpacity
+                         style={styles.actionButton}
+                         onPress={() => handleEditTrip(trip)}
+                       >
+                         <Text style={styles.actionButtonText}>✏️</Text>
+                       </TouchableOpacity>
+                       <TouchableOpacity
+                         style={styles.actionButton}
+                         onPress={() => handleDeleteTrip(trip.id, trip.destination)}
+                       >
+                         <Text style={styles.actionButtonText}>🗑️</Text>
+                       </TouchableOpacity>
+                     </View>
+                    </View>
+                  </View>
                 </View>
                 
                  <View style={styles.tripDetails}>
+                   <View style={styles.tripDetailRow}>
+                     <Text style={styles.tripDetailLabel}>👥 Group:</Text>
+                     <Text style={styles.tripDetailValue}>
+                       {getGroupTypeIcon(trip.groupType)} {trip.groupType}
+                     </Text>
+                   </View>
+                   {typeof (trip as any).dailySpendCap === 'number' && (trip as any).dailySpendCap != null && (
+                     <View style={styles.tripDetailRow}>
+                       <Text style={styles.tripDetailLabel}>💳 Daily Cap:</Text>
+                       <Text style={styles.tripDetailValue}>
+                         {formatAmount((trip as any).dailySpendCap)}
+                       </Text>
+                     </View>
+                   )}
                    <View style={styles.tripDetailRow}>
                      <Text style={styles.tripDetailLabel}>📅 Dates:</Text>
                      <Text style={styles.tripDetailValue}>
@@ -506,17 +564,16 @@ export const SavedTripsScreen = () => {
                    </View>
                    <View style={styles.tripDetailRow}>
                      <Text style={styles.tripDetailLabel}>💰 Budget:</Text>
-                     <Text style={styles.tripDetailValue}>{/* formatted async via IIFE */}
-                       {(() => {
-                         // best-effort synchronous render with symbol; will not await here
-                         return `£${trip.budget}/day`;
-                       })()}
+                     <Text style={styles.tripDetailValue}>
+                       {formatAmount(trip.budget)}/day
                      </Text>
                    </View>
                    {typeof totalSpendByTrip[trip.id] === 'number' && (
                      <View style={styles.tripDetailRow}>
                        <Text style={styles.tripDetailLabel}>🧾 Total Spend:</Text>
-                       <Text style={styles.tripDetailValue}>{Math.round(totalSpendByTrip[trip.id])}</Text>
+                       <Text style={styles.tripDetailValue}>
+                         {formatAmount(Math.round(totalSpendByTrip[trip.id]))}
+                       </Text>
                      </View>
                    )}
                    <View style={styles.tripDetailRow}>
@@ -532,21 +589,24 @@ export const SavedTripsScreen = () => {
                        onPress={() => handleWeatherPress(trip)}
                      />
                    </View>
-                  {(spendByTrip[trip.id] && (spendByTrip[trip.id] as any).length > 0) && (
-                    <View style={{ marginTop: 6 }}>
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                        {(spendByTrip[trip.id] || []).map(({ day, total }) => {
-                          const cap = (trip as any).dailySpendCap as number | undefined;
-                          const over = typeof cap === 'number' && cap != null ? total > cap : false;
-                          return (
-                            <TouchableOpacity key={`${trip.id}-d${day}`} style={[styles.dayChip, over ? styles.dayChipOver : styles.dayChipOk]} onPress={() => { setSelectedTrip(trip); setIsActivityModalVisible(true); /* pass day via state below */ (setPendingInitialDay as any)?.(day); }}>
-                              <Text style={styles.dayChipText}>D{day}: {total.toFixed(0)}{typeof cap==='number' ? `/${cap}`: ''}</Text>
-                            </TouchableOpacity>
-                          );
-                        })}
-                      </ScrollView>
-                    </View>
-                  )}
+                      {(spendByTrip[trip.id] && (spendByTrip[trip.id] as any).length > 0) && (
+                        <View style={{ marginTop: 12, marginBottom: 8 }}>
+                          <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 8, fontWeight: '500' }}>Daily Spending:</Text>
+                          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 20 }}>
+                            {(spendByTrip[trip.id] || []).map(({ day, total }) => {
+                              const cap = (trip as any).dailySpendCap as number | undefined;
+                              const over = typeof cap === 'number' && cap != null ? total > cap : false;
+                              return (
+                                <TouchableOpacity key={`${trip.id}-d${day}`} style={[styles.dayChip, over ? styles.dayChipOver : styles.dayChipOk]} onPress={() => { setSelectedTrip(trip); setIsActivityModalVisible(true); /* pass day via state below */ (setPendingInitialDay as any)?.(day); }}>
+                                  <Text style={styles.dayChipText}>
+                                    D{day}: {formatAmount(total)}{typeof cap==='number' ? `/${formatAmount(cap)}`: ''}
+                                  </Text>
+                                </TouchableOpacity>
+                              );
+                            })}
+                          </ScrollView>
+                        </View>
+                      )}
                 </View>
 
                 <View style={styles.interestsContainer}>
@@ -744,17 +804,37 @@ export const SavedTripsScreen = () => {
          </Modal>
        )}
 
-       {/* Expense Tracker Modal */}
-       {expenseTrip && (
-         <ExpenseTracker
-           tripId={expenseTrip.id}
-           visible={isExpenseModalVisible}
-           onClose={handleCloseExpenseModal}
-         />
-       )}
-     </SafeAreaView>
-   );
- };
+          {/* Expense Tracker Modal */}
+          {expenseTrip && (
+            <ExpenseTracker
+              tripId={expenseTrip.id}
+              visible={isExpenseModalVisible}
+              onClose={handleCloseExpenseModal}
+            />
+          )}
+
+          {/* Packing Assistant Modal */}
+          {packingTrip && (
+            <PackingAssistant
+              tripId={packingTrip.id}
+              destination={packingTrip.destination}
+              visible={isPackingModalVisible}
+              onClose={handleClosePackingModal}
+            />
+          )}
+
+          {/* Social Sharing Modal */}
+          {socialTrip && (
+            <SocialSharing
+              trip={socialTrip}
+              visible={isSocialModalVisible}
+              onClose={handleCloseSocialModal}
+            />
+          )}
+
+        </SafeAreaView>
+      );
+    };
 
 const styles = StyleSheet.create({
   container: {
@@ -764,9 +844,10 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
-  scrollContent: {
-    padding: 16,
-  },
+      scrollContent: {
+        padding: 20,
+        paddingBottom: 40,
+      },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -777,9 +858,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6B7280',
   },
-  header: {
-    marginBottom: 24,
-  },
+      header: {
+        marginBottom: 32,
+        paddingHorizontal: 4,
+      },
   headerTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -797,21 +879,23 @@ const styles = StyleSheet.create({
     color: '#4285F4',
     fontWeight: '500',
   },
-  title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#111827',
-    flex: 1,
-    textAlign: 'center',
-  },
+      title: {
+        fontSize: 32,
+        fontWeight: '800',
+        color: '#111827',
+        flex: 1,
+        textAlign: 'center',
+        letterSpacing: -0.5,
+      },
   placeholder: {
     width: 60,
   },
-  subtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginTop: 4,
-  },
+      subtitle: {
+        fontSize: 18,
+        color: '#6B7280',
+        marginTop: 8,
+        textAlign: 'center',
+      },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -848,49 +932,75 @@ const styles = StyleSheet.create({
   tripsContainer: {
     gap: 16,
   },
-  tripCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    padding: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 3.84,
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
-  },
-  tripHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
+      tripCard: {
+        backgroundColor: '#FFFFFF',
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        shadowColor: '#000',
+        shadowOffset: {
+          width: 0,
+          height: 2,
+        },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+        elevation: 4,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+      },
+      tripHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'flex-start',
+        marginBottom: 12,
+      },
   tripTitleContainer: {
     flex: 1,
   },
-  tripTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 4,
-  },
-  tripGroupType: {
-    fontSize: 14,
-    color: '#6B7280',
-  },
-  tripCap: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 4,
-  },
-  tripActions: {
-    flexDirection: 'row',
-    gap: 8,
-  },
+      tripTitle: {
+        fontSize: 24,
+        fontWeight: '700',
+        color: '#111827',
+        marginBottom: 8,
+      },
+      tripGroupType: {
+        fontSize: 16,
+        color: '#6B7280',
+        marginTop: 16,
+        marginBottom: 6,
+        textAlign: 'center',
+      },
+      tripCap: {
+        fontSize: 14,
+        color: '#6B7280',
+        marginBottom: 8,
+        fontWeight: '500',
+        textAlign: 'center',
+      },
+      tripActionsContainer: {
+        alignItems: 'center',
+        flex: 1,
+        paddingHorizontal: 20,
+      },
+      tripName: {
+        fontSize: 20,
+        fontWeight: '800',
+        color: '#111827',
+        marginBottom: 12,
+        textAlign: 'center',
+        letterSpacing: -0.3,
+      },
+      tripActions: {
+        alignItems: 'center',
+        gap: 8,
+      },
+      actionRow: {
+        flexDirection: 'row',
+        gap: 12,
+        justifyContent: 'center',
+        marginBottom: 8,
+        paddingHorizontal: 8,
+      },
   overCapBadge: {
     backgroundColor: '#FEE2E2',
     borderColor: '#FCA5A5',
@@ -904,16 +1014,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
   },
-   actionButton: {
-     backgroundColor: '#F3F4F6',
-     paddingHorizontal: 8,
-     paddingVertical: 6,
-     borderRadius: 6,
-     marginLeft: 4,
-   },
-   actionButtonText: {
-     fontSize: 14,
-   },
+      actionButton: {
+        backgroundColor: '#F8F9FA',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 10,
+        marginLeft: 4,
+        minWidth: 42,
+        minHeight: 42,
+        alignItems: 'center',
+        justifyContent: 'center',
+        shadowColor: '#000',
+        shadowOffset: {
+          width: 0,
+          height: 1,
+        },
+        shadowOpacity: 0.05,
+        shadowRadius: 2,
+        elevation: 1,
+      },
+      actionButtonText: {
+        fontSize: 16,
+        fontWeight: '500',
+      },
    editButton: {
      backgroundColor: '#F3F4F6',
      paddingHorizontal: 12,
@@ -932,57 +1055,68 @@ const styles = StyleSheet.create({
    deleteButtonText: {
      fontSize: 16,
    },
-   weatherContainer: {
-     marginTop: 12,
-   },
-  tripDetails: {
-    marginBottom: 12,
-  },
-  tripDetailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  tripDetailLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500',
-  },
-  tripDetailValue: {
-    fontSize: 14,
-    color: '#111827',
-    fontWeight: '600',
-  },
-  dayChip: {
-    backgroundColor: '#E5E7EB',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    marginRight: 6,
-  },
-  dayChipOk: {
-    backgroundColor: '#DCFCE7',
-  },
-  dayChipOver: {
-    backgroundColor: '#FEE2E2',
-  },
-  dayChipText: {
-    fontSize: 12,
-    color: '#111827',
-    fontWeight: '600',
-  },
-  interestsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: 8,
-  },
-  tripDate: {
-    fontSize: 12,
-    color: '#9CA3AF',
-    textAlign: 'right',
-  },
+      weatherContainer: {
+        marginTop: 12,
+        marginBottom: 6,
+      },
+      tripDetails: {
+        marginBottom: 12,
+        backgroundColor: '#F8F9FA',
+        padding: 14,
+        borderRadius: 12,
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+      },
+      tripDetailRow: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: 8,
+        paddingVertical: 4,
+      },
+      tripDetailLabel: {
+        fontSize: 14,
+        color: '#6B7280',
+        fontWeight: '500',
+      },
+      tripDetailValue: {
+        fontSize: 14,
+        color: '#111827',
+        fontWeight: '600',
+      },
+      dayChip: {
+        backgroundColor: '#E5E7EB',
+        paddingHorizontal: 12,
+        paddingVertical: 8,
+        borderRadius: 20,
+        marginRight: 8,
+        marginBottom: 8,
+      },
+      dayChipOk: {
+        backgroundColor: '#DCFCE7',
+      },
+      dayChipOver: {
+        backgroundColor: '#FEE2E2',
+      },
+      dayChipText: {
+        fontSize: 13,
+        color: '#111827',
+        fontWeight: '600',
+      },
+      interestsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginBottom: 12,
+        marginTop: 8,
+        paddingHorizontal: 4,
+      },
+      tripDate: {
+        fontSize: 13,
+        color: '#9CA3AF',
+        textAlign: 'right',
+        marginTop: 8,
+      },
   errorText: {
     color: '#EF4444',
     fontSize: 12,

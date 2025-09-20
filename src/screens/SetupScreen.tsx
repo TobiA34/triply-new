@@ -16,12 +16,14 @@ import { DatePicker } from '../components/DatePicker';
 import { GroupTypeSelector } from '../components/GroupTypeSelector';
 import { PreferenceSlider } from '../components/PreferenceSlider';
 import { Chip } from '../components/Chip';
+import { useCurrency } from '../contexts/CurrencyContext';
 
 interface FormErrors {
   [key: string]: string;
 }
 
 export const SetupScreen = () => {
+  const { formatAmount, getCurrencySymbol } = useCurrency();
   const [destination, setDestination] = useState('');
   const [checkIn, setCheckIn] = useState('');
   const [checkOut, setCheckOut] = useState('');
@@ -279,7 +281,7 @@ export const SetupScreen = () => {
             max={1000}
             step={10}
             label="Budget"
-            unit="£"
+            unit={getCurrencySymbol()}
             onBlur={() => handleFieldBlur('budget')}
             error={touched.budget ? errors.budget : undefined}
           />
@@ -287,7 +289,7 @@ export const SetupScreen = () => {
 
         <Section title="Daily spend cap (optional)">
           <FormInput
-            placeholder="e.g. 150"
+            placeholder={`e.g. 150 (${getCurrencySymbol()})`}
             keyboardType="numeric"
             value={dailySpendCap == null ? '' : String(dailySpendCap)}
             onChangeText={(text) => {

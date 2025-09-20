@@ -51,6 +51,19 @@ export interface Poll {
   updatedAt: string;
 }
 
+export interface PackingItem {
+  id: string;
+  tripId: string;
+  category: string;
+  name: string;
+  isPacked: boolean;
+  isEssential: boolean;
+  weatherBased: boolean;
+  notes?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 class DatabaseService {
   private db: SQLite.SQLiteDatabase | null = null;
   private isInitialized = false;
@@ -140,10 +153,27 @@ class DatabaseService {
        );
      `;
 
+     const createPackingItemsTable = `
+       CREATE TABLE IF NOT EXISTS packing_items (
+         id TEXT PRIMARY KEY,
+         tripId TEXT NOT NULL,
+         category TEXT NOT NULL,
+         name TEXT NOT NULL,
+         isPacked INTEGER NOT NULL DEFAULT 0,
+         isEssential INTEGER NOT NULL DEFAULT 0,
+         weatherBased INTEGER NOT NULL DEFAULT 0,
+         notes TEXT,
+         createdAt TEXT NOT NULL,
+         updatedAt TEXT NOT NULL,
+         FOREIGN KEY (tripId) REFERENCES trips (id) ON DELETE CASCADE
+       );
+     `;
+
      await this.db.execAsync(createTripsTable);
      await this.db.execAsync(createActivitiesTable);
      await this.db.execAsync(createPollsTable);
      await this.db.execAsync(createExpensesTable);
+     await this.db.execAsync(createPackingItemsTable);
 
     // best-effort migrations for existing installations (ALTER TABLE will throw if column exists)
     try { await this.db!.execAsync("ALTER TABLE trips ADD COLUMN dailySpendCap INTEGER"); } catch {}
@@ -357,6 +387,74 @@ class DatabaseService {
     if (!this.db) throw new Error('Database not initialized');
     const res = await this.db.getFirstAsync('SELECT * FROM polls WHERE tripId = ? ORDER BY createdAt DESC LIMIT 1', [tripId]);
     return res as Poll | null;
+  }
+
+  // Packing Item CRUD
+  async savePackingItem(itemData: Omit<PackingItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    if (!this.db) throw new Error('Database not initialized');
+    const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const now = new Date().toISOString();
+    const insertQuery = `
+      INSERT INTO packing_items (id, tripId, category, name, isPacked, isEssential, weatherBased, notes, createdAt, updatedAt)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    await this.db.runAsync(insertQuery, [
+      id,
+      itemData.tripId,
+      itemData.category,
+      itemData.name,
+      itemData.isPacked ? 1 : 0,
+      itemData.isEssential ? 1 : 0,
+      itemData.weatherBased ? 1 : 0,
+      itemData.notes || null,
+      now,
+      now
+    ]);
+    return id;
+  }
+
+  async getPackingItemsForTrip(tripId: string): Promise<PackingItem[]> {
+    if (!this.db) throw new Error('Database not initialized');
+    const selectQuery = 'SELECT * FROM packing_items WHERE tripId = ? ORDER BY category ASC, name ASC';
+    const result = await this.db.getAllAsync(selectQuery, [tripId]);
+    return result.map(row => ({
+      ...row,
+      isPacked: Boolean((row as any).isPacked),
+      isEssential: Boolean((row as any).isEssential),
+      weatherBased: Boolean((row as any).weatherBased),
+    })) as PackingItem[];
+  }
+
+  async updatePackingItem(id: string, itemData: Partial<Omit<PackingItem, 'id' | 'tripId' | 'createdAt'>>): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    const now = new Date().toISOString();
+    const updateQuery = `
+      UPDATE packing_items
+      SET category = COALESCE(?, category),
+          name = COALESCE(?, name),
+          isPacked = COALESCE(?, isPacked),
+          isEssential = COALESCE(?, isEssential),
+          weatherBased = COALESCE(?, weatherBased),
+          notes = COALESCE(?, notes),
+          updatedAt = ?
+      WHERE id = ?
+    `;
+    await this.db.runAsync(updateQuery, [
+      itemData.category || null,
+      itemData.name || null,
+      itemData.isPacked !== undefined ? (itemData.isPacked ? 1 : 0) : null,
+      itemData.isEssential !== undefined ? (itemData.isEssential ? 1 : 0) : null,
+      itemData.weatherBased !== undefined ? (itemData.weatherBased ? 1 : 0) : null,
+      itemData.notes || null,
+      now,
+      id
+    ]);
+  }
+
+  async deletePackingItem(id: string): Promise<void> {
+    if (!this.db) throw new Error('Database not initialized');
+    const deleteQuery = 'DELETE FROM packing_items WHERE id = ?';
+    await this.db.runAsync(deleteQuery, [id]);
   }
 }
 

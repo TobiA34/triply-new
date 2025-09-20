@@ -4,8 +4,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { SetupScreen } from '../screens/SetupScreen';
 import { SavedTripsScreen } from '../screens/SavedTripsScreen';
 import { ItineraryScreen } from '../screens/ItineraryScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
 
-type TabName = 'Create' | 'Trips' | 'AI';
+type TabName = 'Create' | 'Trips' | 'AI' | 'Settings';
 
 export const CustomTabNavigator = () => {
   const [activeTab, setActiveTab] = useState<TabName>('Create');
@@ -18,6 +19,8 @@ export const CustomTabNavigator = () => {
         return <SavedTripsScreen />;
       case 'AI':
         return <ItineraryScreen />;
+      case 'Settings':
+        return <SettingsScreen />;
       default:
         return <SetupScreen />;
     }
@@ -27,6 +30,7 @@ export const CustomTabNavigator = () => {
     { name: 'Create' as TabName, icon: 'add-circle-outline', activeIcon: 'add-circle', label: 'Create' },
     { name: 'Trips' as TabName, icon: 'map-outline', activeIcon: 'map', label: 'Trips' },
     { name: 'AI' as TabName, icon: 'chatbubble-outline', activeIcon: 'chatbubble', label: 'AI' },
+    { name: 'Settings' as TabName, icon: 'settings-outline', activeIcon: 'settings', label: 'Settings' },
   ];
 
   return (
