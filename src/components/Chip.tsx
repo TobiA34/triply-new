@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.primary.main,
   },
   label: {
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.primary,
     lineHeight: typography.lineHeight.sm,
   },

@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { expenseService, Expense, ExpenseSummary, BudgetAlert, getCategoryIcon, getCategoryColor, formatCurrency } from '../services/expenseService';
+import { useLocalization } from '../contexts/LocalizationContext';
 
 interface ExpenseTrackerProps {
   tripId: string;
@@ -20,16 +21,17 @@ interface ExpenseTrackerProps {
   onClose: () => void;
 }
 
-const EXPENSE_CATEGORIES = [
-  { id: 'food', label: 'Food & Dining', icon: '🍽️' },
-  { id: 'transport', label: 'Transportation', icon: '🚗' },
-  { id: 'accommodation', label: 'Accommodation', icon: '🏨' },
-  { id: 'entertainment', label: 'Entertainment', icon: '🎭' },
-  { id: 'shopping', label: 'Shopping', icon: '🛍️' },
-  { id: 'other', label: 'Other', icon: '💳' },
-];
-
 export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ tripId, visible, onClose }) => {
+  const { t } = useLocalization();
+  
+  const EXPENSE_CATEGORIES = [
+    { id: 'food', label: t('expense.categories.food'), icon: '🍽️' },
+    { id: 'transport', label: t('expense.categories.transport'), icon: '🚗' },
+    { id: 'accommodation', label: t('expense.categories.accommodation'), icon: '🏨' },
+    { id: 'entertainment', label: t('expense.categories.entertainment'), icon: '🎭' },
+    { id: 'shopping', label: t('expense.categories.shopping'), icon: '🛍️' },
+    { id: 'other', label: t('expense.categories.other'), icon: '💳' },
+  ];
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [summary, setSummary] = useState<ExpenseSummary | null>(null);
   const [alerts, setAlerts] = useState<BudgetAlert[]>([]);
@@ -66,7 +68,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ tripId, visible,
       setAlerts(alertsData);
     } catch (error) {
       console.error('Error loading expense data:', error);
-      Alert.alert('Error', 'Failed to load expense data');
+      Alert.alert(t('common.error'), t('alert.loadExpenseError'));
     } finally {
       setLoading(false);
     }
@@ -86,11 +88,11 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ tripId, visible,
           description: description,
         }));
         
-        Alert.alert('Receipt Processed', amount ? `Amount detected: ${formatCurrency(amount)}` : 'Amount could not be detected. Please enter manually.');
+        Alert.alert(t('alert.receiptProcessed'), amount ? t('alert.amountDetected').replace('{amount}', formatCurrency(amount)) : t('alert.amountNotDetected'));
       }
     } catch (error) {
       console.error('Error processing receipt:', error);
-      Alert.alert('Error', 'Failed to process receipt');
+      Alert.alert(t('common.error'), t('alert.processReceiptError'));
     } finally {
       setProcessingReceipt(false);
     }
@@ -110,11 +112,11 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ tripId, visible,
           description: description,
         }));
         
-        Alert.alert('Receipt Processed', amount ? `Amount detected: ${formatCurrency(amount)}` : 'Amount could not be detected. Please enter manually.');
+        Alert.alert(t('alert.receiptProcessed'), amount ? t('alert.amountDetected').replace('{amount}', formatCurrency(amount)) : t('alert.amountNotDetected'));
       }
     } catch (error) {
       console.error('Error processing receipt:', error);
-      Alert.alert('Error', 'Failed to process receipt');
+      Alert.alert(t('common.error'), t('alert.processReceiptError'));
     } finally {
       setProcessingReceipt(false);
     }
@@ -122,14 +124,14 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ tripId, visible,
 
   const handleSaveExpense = async () => {
     if (!newExpense.amount || !newExpense.description) {
-      Alert.alert('Error', 'Please fill in amount and description');
+      Alert.alert(t('common.error'), t('alert.fillAmountDescription'));
       return;
     }
 
     try {
       const amount = parseFloat(newExpense.amount);
       if (isNaN(amount) || amount <= 0) {
-        Alert.alert('Error', 'Please enter a valid amount');
+        Alert.alert(t('common.error'), t('alert.enterValidAmount'));
         return;
       }
 
@@ -153,21 +155,21 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ tripId, visible,
       setShowAddExpense(false);
       await loadExpenseData();
       
-      Alert.alert('Success', 'Expense added successfully');
+      Alert.alert(t('common.success'), t('alert.expenseAdded'));
     } catch (error) {
       console.error('Error saving expense:', error);
-      Alert.alert('Error', 'Failed to save expense');
+      Alert.alert(t('common.error'), t('alert.saveExpenseError'));
     }
   };
 
   const handleDeleteExpense = (expenseId: string) => {
     Alert.alert(
-      'Delete Expense',
-      'Are you sure you want to delete this expense?',
+      t('alert.deleteExpense'),
+      t('alert.deleteExpenseConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -175,7 +177,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ tripId, visible,
               await loadExpenseData();
             } catch (error) {
               console.error('Error deleting expense:', error);
-              Alert.alert('Error', 'Failed to delete expense');
+              Alert.alert(t('common.error'), t('alert.deleteExpenseError'));
             }
           },
         },
@@ -389,7 +391,7 @@ export const ExpenseTracker: React.FC<ExpenseTrackerProps> = ({ tripId, visible,
                 <Text style={styles.inputLabel}>Amount *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="0.00"
+                  placeholder={t('trip.amountPlaceholder')}
                   value={newExpense.amount}
                   onChangeText={(text) => setNewExpense(prev => ({ ...prev, amount: text }))}
                   keyboardType="numeric"

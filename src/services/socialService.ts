@@ -302,7 +302,7 @@ export async function exportTripAsPDF(tripId: string): Promise<string> {
     `;
 
     const fileName = `trip-${trip.destination.replace(/\s+/g, '-').toLowerCase()}.html`;
-    const fileUri = `${FileSystem.documentDirectory}${fileName}`;
+    const fileUri = `${(FileSystem as any).documentDirectory || (FileSystem as any).cacheDirectory}${fileName}`;
     
     await FileSystem.writeAsStringAsync(fileUri, pdfContent);
     

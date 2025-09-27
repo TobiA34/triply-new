@@ -438,7 +438,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: typography.fontSize['4xl'],
-    fontFamily: typography.fontFamily.bold,
+      fontFamily: typography?.fontFamily?.bold || 'System',
     color: colors.text.primary,
     marginBottom: spacing.sm,
     textAlign: 'center',
@@ -447,7 +447,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     textAlign: 'center',
     lineHeight: typography.lineHeight.lg,
@@ -469,7 +469,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.status.error,
     fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     marginTop: spacing.xs,
     lineHeight: typography.lineHeight.xs,
   },
@@ -489,7 +489,7 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: colors.primary.contrastText,
     fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     lineHeight: typography.lineHeight.lg,
   },
   selectedLocationContainer: {
@@ -506,7 +506,7 @@ const styles = StyleSheet.create({
   },
   selectedLocationText: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.primary.main,
     marginLeft: spacing.sm,
     lineHeight: typography.lineHeight.sm,

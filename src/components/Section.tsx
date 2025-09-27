@@ -31,14 +31,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     lineHeight: typography.lineHeight.lg,
     letterSpacing: typography.letterSpacing.tight,
   },
   subtitle: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     lineHeight: typography.lineHeight.sm,
     marginTop: spacing.xs,

@@ -215,7 +215,11 @@ export async function generatePackingList(tripId: string, destination: string): 
 
 export async function getPackingList(tripId: string): Promise<PackingItem[]> {
   try {
-    return await databaseService.getPackingItemsForTrip(tripId);
+    const items = await databaseService.getPackingItemsForTrip(tripId);
+    return items.map(item => ({
+      ...item,
+      notes: item.notes || undefined,
+    }));
   } catch (error) {
     console.error('Error fetching packing list:', error);
     throw new Error('Failed to fetch packing list');

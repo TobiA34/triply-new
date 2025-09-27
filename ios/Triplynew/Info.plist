@@ -70,5 +70,9 @@
 	<string>Light</string>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<false/>
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>This app needs access to your photo library to select and add trip photos.</string>
+  <key>NSCameraUsageDescription</key>
+  <string>This app needs access to your camera to capture photos for your trips.</string>
 </dict>
 </plist>

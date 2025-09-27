@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -9,132 +9,256 @@ import {
   RefreshControl,
   ActivityIndicator,
   Modal,
+  TextInput,
+  Animated,
+  Dimensions,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { databaseService, Trip } from '../services/database';
 import { getSpendByDayForTrip } from '../services/database';
-import { Section } from '../components/Section';
-import { Chip } from '../components/Chip';
-import { FormInput } from '../components/FormInput';
-import { DatePicker } from '../components/DatePicker';
-import { GroupTypeSelector } from '../components/GroupTypeSelector';
-import { PreferenceSlider } from '../components/PreferenceSlider';
-import { ActivityManagementScreen } from './ActivityManagementScreen';
+import { TripCard } from '../components/TripCard';
+import { EnhancedHeader } from '../components/EnhancedHeader';
+import { EnhancedButton } from '../components/EnhancedButton';
+import { EditTripScreen } from './EditTripScreen';
+import { ActivityModal } from '../components/ActivityModal';
 import { WeatherWidget } from '../components/WeatherWidget';
 import { ExpenseTracker } from '../components/ExpenseTracker';
 import { PackingAssistant } from '../components/PackingAssistant';
 import { SocialSharing } from '../components/SocialSharing';
+import { AnalyticsDashboard } from '../components/AnalyticsDashboard';
+import { SmartRecommendations } from '../components/SmartRecommendations';
+import { TripTimeline } from '../components/TripTimeline';
+import { TripPhotos } from '../components/TripPhotos';
+import { TripNotes } from '../components/TripNotes';
+import { TripChecklist } from '../components/TripChecklist';
+import { TripMap } from '../components/TripMap';
 import { formatDate, formatDateRange, formatRelativeDate } from '../utils/dateFormatting';
 import { useCurrency } from '../contexts/CurrencyContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { useLocalization } from '../contexts/LocalizationContext';
+import { useCompactMode } from '../contexts/CompactModeContext';
+import { useAccessibility } from '../hooks/useAccessibility';
+import { useThemeColors } from '../hooks/useThemeColors';
+import { designSystem, professionalSpacing, professionalShadows, professionalBorderRadius } from '../theme/designSystem';
 
 interface FormErrors {
   [key: string]: string;
 }
 
-export const SavedTripsScreen = () => {
-  const { formatAmount, getCurrencySymbol } = useCurrency();
+interface SavedTripsScreenProps {
+  onNavigateToSetup?: () => void;
+  onNavigateToItinerary?: () => void;
+  onOpenActivities?: (trip: Trip) => void;
+}
+
+export const SavedTripsScreen = ({ onNavigateToSetup, onNavigateToItinerary, onOpenActivities }: SavedTripsScreenProps = {}) => {
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [filteredTrips, setFilteredTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'date' | 'destination' | 'budget'>('date');
+  const [filterBy, setFilterBy] = useState<'all' | 'upcoming' | 'completed' | 'current'>('all');
+  const [showFilters, setShowFilters] = useState(false);
+  const [isEditScreenVisible, setIsEditScreenVisible] = useState(false);
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null);
-  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [overCapCounts, setOverCapCounts] = useState<Record<string, number>>({});
-  const [spendByTrip, setSpendByTrip] = useState<Record<string, { day: number; total: number }[]>>({});
-  const [totalSpendByTrip, setTotalSpendByTrip] = useState<Record<string, number>>({});
-
-  // Edit form state
-  const [editDestination, setEditDestination] = useState('');
-  const [editCheckIn, setEditCheckIn] = useState('');
-  const [editCheckOut, setEditCheckOut] = useState('');
-  const [editBudget, setEditBudget] = useState(50);
-  const [editActivityLevel, setEditActivityLevel] = useState(50);
-  const [editDailyCap, setEditDailyCap] = useState<number | undefined>(undefined);
-  const [editSelectedGroupType, setEditSelectedGroupType] = useState('couple');
-  const [editSelectedInterests, setEditSelectedInterests] = useState<string[]>([]);
-  const [editErrors, setEditErrors] = useState<FormErrors>({});
-  const [editTouched, setEditTouched] = useState<Record<string, boolean>>({});
-  
-  // Activity management state
-  const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null);
   const [isActivityModalVisible, setIsActivityModalVisible] = useState(false);
-  const [pendingInitialDay, setPendingInitialDay] = useState<number | undefined>(undefined);
+  const [selectedTripForActivity, setSelectedTripForActivity] = useState<Trip | null>(null);
+  const [editingActivity, setEditingActivity] = useState<any>(null);
+  const [tripActivities, setTripActivities] = useState<Record<string, any[]>>({});
   
-  // Weather and expense tracking state
+  // Animation values
+  const fadeAnim = useState(new Animated.Value(0))[0];
+  const slideAnim = useState(new Animated.Value(50))[0];
+  
+  // Modal states
   const [isWeatherModalVisible, setIsWeatherModalVisible] = useState(false);
   const [isExpenseModalVisible, setIsExpenseModalVisible] = useState(false);
-  const [weatherTrip, setWeatherTrip] = useState<Trip | null>(null);
-  const [expenseTrip, setExpenseTrip] = useState<Trip | null>(null);
-
-  // Packing and social sharing state
   const [isPackingModalVisible, setIsPackingModalVisible] = useState(false);
   const [isSocialModalVisible, setIsSocialModalVisible] = useState(false);
+  const [isAnalyticsModalVisible, setIsAnalyticsModalVisible] = useState(false);
+  const [isRecommendationsModalVisible, setIsRecommendationsModalVisible] = useState(false);
+  const [isTimelineModalVisible, setIsTimelineModalVisible] = useState(false);
+  const [isPhotosModalVisible, setIsPhotosModalVisible] = useState(false);
+  const [isNotesModalVisible, setIsNotesModalVisible] = useState(false);
+  const [isChecklistModalVisible, setIsChecklistModalVisible] = useState(false);
+  const [isMapModalVisible, setIsMapModalVisible] = useState(false);
+
+  // Photos state per trip (in-memory for now; can be persisted later)
+  interface PhotoItem { id: string; uri: string; caption: string; timestamp: string; location?: string }
+  const [photosByTrip, setPhotosByTrip] = useState<Record<string, PhotoItem[]>>({});
+  
+  // Selected trip for features
+  const [selectedTripForFeature, setSelectedTripForFeature] = useState<Trip | null>(null);
+  const [weatherTrip, setWeatherTrip] = useState<Trip | null>(null);
+  const [expenseTrip, setExpenseTrip] = useState<Trip | null>(null);
   const [packingTrip, setPackingTrip] = useState<Trip | null>(null);
   const [socialTrip, setSocialTrip] = useState<Trip | null>(null);
 
+  // Data states
+  const [totalSpendByTrip, setTotalSpendByTrip] = useState<Record<string, number>>({});
+  const [overCapCounts, setOverCapCounts] = useState<Record<string, number>>({});
+  const [spendByTrip, setSpendByTrip] = useState<Record<string, any[]>>({});
 
-  // Define interests array
-  const interests = [
-    { id: 'adventure', label: 'Adventure' },
-    { id: 'culture', label: 'Culture' },
-    { id: 'food', label: 'Food & Dining' },
-    { id: 'nature', label: 'Nature' },
-    { id: 'nightlife', label: 'Nightlife' },
-    { id: 'shopping', label: 'Shopping' },
-    { id: 'relaxation', label: 'Relaxation' },
-    { id: 'history', label: 'History' },
-    { id: 'art', label: 'Art & Museums' },
-    { id: 'sports', label: 'Sports' },
-  ];
+  // Hooks
+  const currencyContext = useCurrency();
+  const { formatAmount, getCurrencySymbol, currency } = currencyContext || { 
+    formatAmount: (amount: number) => `$${amount.toFixed(2)}`, 
+    getCurrencySymbol: () => '$', 
+    currency: 'USD' as any 
+  };
+  const { t, language } = useLocalization();
+  
+  // Debug logging
+  console.log('SavedTripsScreen render - language:', language);
+  console.log('SavedTripsScreen render - title translation:', t('trips.title'));
+  const { isCompactMode } = useCompactMode();
+  const { getButtonProps, getTextProps, getInputProps } = useAccessibility();
+  const colors = useThemeColors();
 
+  // Load trips on mount
   useEffect(() => {
-    initializeDatabase();
+    loadTrips();
   }, []);
 
-  const initializeDatabase = async () => {
+  // Load spending data when trips change
+  useEffect(() => {
+    if (trips.length > 0) {
+      loadSpendingData();
+    }
+  }, [trips]);
+
+  // Utility: normalize date to start/end of day for reliable comparisons
+  const startOfDay = (date: Date) => {
+    const d = new Date(date);
+    d.setHours(0, 0, 0, 0);
+    return d;
+  };
+  const endOfDay = (date: Date) => {
+    const d = new Date(date);
+    d.setHours(23, 59, 59, 999);
+    return d;
+  };
+
+  // Filter and sort trips
+  useEffect(() => {
+    let filtered = [...trips];
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(trip =>
+        trip.destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        trip.groupType.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    // Apply status filter
+    const now = new Date();
+    switch (filterBy) {
+      case 'upcoming':
+        filtered = filtered.filter(trip => startOfDay(new Date(trip.checkIn)) > endOfDay(now));
+        break;
+      case 'completed':
+        filtered = filtered.filter(trip => endOfDay(new Date(trip.checkOut)) < startOfDay(now));
+        break;
+      case 'current':
+        filtered = filtered.filter(trip => {
+          const checkIn = startOfDay(new Date(trip.checkIn));
+          const checkOut = endOfDay(new Date(trip.checkOut));
+          return checkIn <= now && checkOut >= now;
+        });
+        break;
+    }
+
+    // Apply sorting
+    filtered.sort((a, b) => {
+      switch (sortBy) {
+        case 'destination':
+          return a.destination.localeCompare(b.destination);
+        case 'budget':
+          return b.budget - a.budget;
+        case 'date':
+        default:
+          // Sort by earliest upcoming/current first, then past
+          const aTime = new Date(a.checkIn).getTime();
+          const bTime = new Date(b.checkIn).getTime();
+          return aTime - bTime;
+      }
+    });
+
+    setFilteredTrips(filtered);
+  }, [trips, searchQuery, sortBy, filterBy]);
+
+  // Animate content on load
+  useEffect(() => {
+    if (!loading && trips.length > 0) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [loading, trips.length]);
+
+  const loadTrips = async () => {
     try {
-      await databaseService.init();
-      await loadTrips();
+      setLoading(true);
+      const tripsData = await databaseService.getAllTrips();
+      setTrips(tripsData);
+      
+      // Load activities for each trip
+      const activitiesMap: Record<string, any[]> = {};
+      for (const trip of tripsData) {
+        try {
+          const activities = await databaseService.getActivitiesForTrip(trip.id);
+          activitiesMap[trip.id] = activities;
+        } catch (error) {
+          console.error(`Error loading activities for trip ${trip.id}:`, error);
+          activitiesMap[trip.id] = [];
+        }
+      }
+      setTripActivities(activitiesMap);
     } catch (error) {
-      console.error('Error initializing database:', error);
-      Alert.alert('Error', 'Failed to initialize database');
+      console.error('Error loading trips:', error);
+      Alert.alert(t('common.error'), t('alert.loadTripsError'));
     } finally {
       setLoading(false);
     }
   };
 
-  const loadTrips = async () => {
+  const loadSpendingData = async () => {
     try {
-      const savedTrips = await databaseService.getAllTrips();
-      setTrips(savedTrips);
-      // compute over-cap days per trip
-      const entries = await Promise.all(savedTrips.map(async (t) => {
-        const cap = (t as any).dailySpendCap as number | undefined;
-        if (typeof cap !== 'number' || cap == null) return [t.id, 0] as const;
-        try {
-          const byDay = await getSpendByDayForTrip(t.id);
-          const over = byDay.filter(d => d.total > cap).length;
-          return [t.id, over] as const;
-        } catch {
-          return [t.id, 0] as const;
-        }
-      }));
-      setOverCapCounts(Object.fromEntries(entries));
+      const spendData: Record<string, any[]> = {};
+      const totalSpend: Record<string, number> = {};
+      const overCap: Record<string, number> = {};
 
-      // store per-day spend breakdown
-      const spendEntries = await Promise.all(savedTrips.map(async (t) => {
-        try {
-          const byDay = await getSpendByDayForTrip(t.id);
-          return [t.id, byDay] as const;
-        } catch {
-          return [t.id, []] as const;
-        }
-      }));
-      setSpendByTrip(Object.fromEntries(spendEntries));
-      setTotalSpendByTrip(Object.fromEntries(spendEntries.map(([id, days]) => [id, (days as any[]).reduce((acc, d) => acc + (d.total || 0), 0)])));
+      for (const trip of trips) {
+        const dailySpend = await getSpendByDayForTrip(trip.id);
+        spendData[trip.id] = dailySpend;
+        
+        const total = dailySpend.reduce((sum, day) => sum + day.total, 0);
+        totalSpend[trip.id] = total;
+        
+        const overCapDays = dailySpend.filter(day => 
+          trip.dailySpendCap && day.total > trip.dailySpendCap
+        ).length;
+        overCap[trip.id] = overCapDays;
+      }
+
+      setSpendByTrip(spendData);
+      setTotalSpendByTrip(totalSpend);
+      setOverCapCounts(overCap);
     } catch (error) {
-      console.error('Error loading trips:', error);
-      Alert.alert('Error', 'Failed to load saved trips');
+      console.error('Error loading spending data:', error);
     }
   };
 
@@ -144,15 +268,73 @@ export const SavedTripsScreen = () => {
     setRefreshing(false);
   };
 
+  // Event handlers
   const handleTripCardPress = (trip: Trip) => {
-    setSelectedTrip(trip);
+    // Open Activities for this trip
+    onOpenActivities?.(trip);
+  };
+
+  const handleAddActivity = (trip: Trip) => {
+    setSelectedTripForActivity(trip);
+    setEditingActivity(null);
     setIsActivityModalVisible(true);
   };
 
-  const handleCloseActivityModal = () => {
-    setIsActivityModalVisible(false);
-    setSelectedTrip(null);
-    setPendingInitialDay(undefined);
+  const handleEditActivity = (trip: Trip, activity: any) => {
+    setSelectedTripForActivity(trip);
+    setEditingActivity(activity);
+    setIsActivityModalVisible(true);
+  };
+
+  const handleDeleteActivity = async (tripId: string, activityId: string) => {
+    Alert.alert(
+      t('alert.deleteActivity'),
+      t('alert.deleteActivityConfirm'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('common.delete'),
+          onPress: async () => {
+            try {
+              await databaseService.deleteActivity(activityId);
+              await loadTrips(); // Reload to update activities
+              Alert.alert(t('common.success'), t('alert.activityDeleted'));
+            } catch (error) {
+              console.error('Error deleting activity:', error);
+              Alert.alert(t('alert.error'), t('alert.activityDeleteError'));
+            }
+          }
+        }
+      ]
+    );
+  };
+
+  const handleSaveActivity = async (activityData: any) => {
+    if (!selectedTripForActivity) return;
+
+    try {
+      if (editingActivity) {
+        // Update existing activity
+        await databaseService.updateActivity(editingActivity.id, activityData);
+        Alert.alert(t('common.success'), t('alert.activityUpdated'));
+      } else {
+        // Add new activity
+        await databaseService.saveActivity({
+          ...activityData,
+          tripId: selectedTripForActivity.id,
+          day: 1 // Default to day 1, can be enhanced later
+        });
+        Alert.alert(t('common.success'), t('alert.activityAdded'));
+      }
+      
+      await loadTrips(); // Reload to update activities
+      setIsActivityModalVisible(false);
+      setSelectedTripForActivity(null);
+      setEditingActivity(null);
+    } catch (error) {
+      console.error('Error saving activity:', error);
+      Alert.alert(t('alert.error'), editingActivity ? t('alert.activityUpdateError') : t('alert.activityAddError'));
+    }
   };
 
   const handleWeatherPress = (trip: Trip) => {
@@ -160,19 +342,9 @@ export const SavedTripsScreen = () => {
     setIsWeatherModalVisible(true);
   };
 
-  const handleCloseWeatherModal = () => {
-    setIsWeatherModalVisible(false);
-    setWeatherTrip(null);
-  };
-
   const handleExpensePress = (trip: Trip) => {
     setExpenseTrip(trip);
     setIsExpenseModalVisible(true);
-  };
-
-  const handleCloseExpenseModal = () => {
-    setIsExpenseModalVisible(false);
-    setExpenseTrip(null);
   };
 
   const handlePackingPress = (trip: Trip) => {
@@ -180,999 +352,707 @@ export const SavedTripsScreen = () => {
     setIsPackingModalVisible(true);
   };
 
-  const handleClosePackingModal = () => {
-    setIsPackingModalVisible(false);
-    setPackingTrip(null);
-  };
-
   const handleSocialPress = (trip: Trip) => {
     setSocialTrip(trip);
     setIsSocialModalVisible(true);
   };
 
-  const handleCloseSocialModal = () => {
-    setIsSocialModalVisible(false);
-    setSocialTrip(null);
+  const handleEditTrip = (trip: Trip) => {
+    setEditingTrip(trip);
+    setIsEditScreenVisible(true);
   };
 
-  const handleDeleteTrip = (tripId: string, tripDestination: string) => {
+  const handleTripPress = (trip: Trip) => {
+    // Navigate to itinerary screen when trip card is pressed
+    onNavigateToItinerary?.();
+  };
+
+  const handleDeleteTrip = (tripId: string, destination: string) => {
     Alert.alert(
-      'Delete Trip',
-      `Are you sure you want to delete your trip to ${tripDestination}?`,
+      t('alert.deleteTrip'),
+      `${t('alert.deleteTripConfirm')} ${destination}?`,
       [
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
+          text: t('common.delete'),
           onPress: async () => {
             try {
               await databaseService.deleteTrip(tripId);
               await loadTrips();
-              Alert.alert('Success', 'Trip deleted successfully');
             } catch (error) {
               console.error('Error deleting trip:', error);
-              Alert.alert('Error', 'Failed to delete trip');
+              Alert.alert(t('common.error'), t('alert.deleteTripError'));
             }
           },
+          style: 'destructive',
         },
       ]
     );
   };
 
-  const handleEditTrip = (trip: Trip) => {
-    setEditingTrip(trip);
-    setEditDestination(trip.destination);
-    setEditCheckIn(trip.checkIn);
-    setEditCheckOut(trip.checkOut);
-    setEditBudget(trip.budget);
-    setEditActivityLevel(trip.activityLevel);
-    setEditSelectedGroupType(trip.groupType);
-    setEditSelectedInterests(parseInterests(trip.interests));
-    setEditDailyCap((trip as any).dailySpendCap ?? undefined);
-    setEditErrors({});
-    setEditTouched({});
-    setIsEditModalVisible(true);
+  const handleAnalyticsPress = () => {
+    setIsAnalyticsModalVisible(true);
   };
 
-  const parseInterests = (interestsString: string): string[] => {
-    try {
-      return JSON.parse(interestsString);
-    } catch {
-      return [];
-    }
+  const handleRecommendationsPress = () => {
+    setIsRecommendationsModalVisible(true);
   };
 
-  const validateEditField = (field: string, value: any): string | undefined => {
-    switch (field) {
-      case 'editDestination':
-        if (!value || value.trim().length === 0) {
-          return 'Destination is required';
-        }
-        if (value.trim().length < 2) {
-          return 'Destination must be at least 2 characters';
-        }
-        break;
-      case 'editCheckIn':
-        if (!value || value.trim().length === 0) {
-          return 'Check-in date is required';
-        }
-        break;
-      case 'editCheckOut':
-        if (!value || value.trim().length === 0) {
-          return 'Check-out date is required';
-        }
-        if (value && editCheckIn && new Date(value) <= new Date(editCheckIn)) {
-          return 'Check-out must be after check-in';
-        }
-        break;
-      case 'editBudget':
-        if (value < 10) {
-          return 'Budget must be at least $10';
-        }
-        break;
-      case 'editActivityLevel':
-        if (value < 0 || value > 100) {
-          return 'Activity level must be between 0 and 100';
-        }
-        break;
-      case 'editSelectedInterests':
-        if (!value || value.length === 0) {
-          return 'Please select at least one interest';
-        }
-        break;
-      case 'editDailyCap':
-        if (value != null && value !== '' && (isNaN(value) || Number(value) < 0)) {
-          return 'Daily cap must be a positive number';
-        }
-        break;
-      default:
-        return undefined;
-    }
-    return undefined;
+  const handleTimelinePress = (trip: Trip) => {
+    setSelectedTripForFeature(trip);
+    setIsTimelineModalVisible(true);
   };
 
-  const handleEditFieldBlur = (field: string) => {
-    setEditTouched(prev => ({ ...prev, [field]: true }));
-    
-    let value: any;
-    switch (field) {
-      case 'editDestination':
-        value = editDestination;
-        break;
-      case 'editCheckIn':
-        value = editCheckIn;
-        break;
-      case 'editCheckOut':
-        value = editCheckOut;
-        break;
-      case 'editBudget':
-        value = editBudget;
-        break;
-      case 'editActivityLevel':
-        value = editActivityLevel;
-        break;
-      case 'editSelectedInterests':
-        value = editSelectedInterests;
-        break;
-      case 'editDailyCap':
-        value = editDailyCap;
-        break;
-      default:
-        return;
-    }
-
-    const error = validateEditField(field, value);
-    setEditErrors(prev => ({
-      ...prev,
-      [field]: error || '',
-    }));
+  const handlePhotosPress = (trip: Trip) => {
+    setSelectedTripForFeature(trip);
+    setIsPhotosModalVisible(true);
   };
 
-  const handleSaveEdit = async () => {
-    if (!editingTrip) return;
-
-    // Mark all fields as touched
-    const allFields = ['editDestination', 'editCheckIn', 'editCheckOut', 'editBudget', 'editActivityLevel', 'editSelectedInterests', 'editDailyCap'];
-    const newTouched = allFields.reduce((acc, field) => ({ ...acc, [field]: true }), {});
-    setEditTouched(newTouched);
-
-    // Validate all fields
-    const newErrors: FormErrors = {};
-    allFields.forEach(field => {
-      let value: any;
-      switch (field) {
-        case 'editDestination':
-          value = editDestination;
-          break;
-        case 'editCheckIn':
-          value = editCheckIn;
-          break;
-        case 'editCheckOut':
-          value = editCheckOut;
-          break;
-        case 'editBudget':
-          value = editBudget;
-          break;
-        case 'editActivityLevel':
-          value = editActivityLevel;
-          break;
-        case 'editSelectedInterests':
-          value = editSelectedInterests;
-          break;
-        case 'editDailyCap':
-          value = editDailyCap;
-          break;
-      }
-      const error = validateEditField(field, value);
-      if (error) {
-        newErrors[field] = error;
-      }
-    });
-
-    setEditErrors(newErrors);
-
-    // If there are errors, don't proceed
-    if (Object.keys(newErrors).length > 0) {
-      Alert.alert('Validation Error', 'Please fix the errors before saving');
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      const tripData = {
-        destination: editDestination.trim(),
-        checkIn: editCheckIn,
-        checkOut: editCheckOut,
-        budget: editBudget,
-        activityLevel: editActivityLevel,
-        groupType: editSelectedGroupType,
-        interests: JSON.stringify(editSelectedInterests),
-        dailySpendCap: (editDailyCap != null && !isNaN(editDailyCap)) ? Math.round(Number(editDailyCap)) : null,
-      };
-
-      await databaseService.updateTrip(editingTrip.id, tripData);
-      await loadTrips();
-      
-      setIsEditModalVisible(false);
-      setEditingTrip(null);
-      Alert.alert('Success', 'Trip updated successfully!');
-    } catch (error) {
-      console.error('Error updating trip:', error);
-      Alert.alert('Error', 'Failed to update trip. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleEditInterestToggle = (interestId: string) => {
-    setEditSelectedInterests(prev => {
-      const newInterests = prev.includes(interestId)
-        ? prev.filter(id => id !== interestId)
-        : [...prev, interestId];
-      
-      // Validate interests when changed
-      if (editTouched.editSelectedInterests) {
-        const error = validateEditField('editSelectedInterests', newInterests);
-        setEditErrors(prev => ({
-          ...prev,
-          editSelectedInterests: error || '',
-        }));
-      }
-      
-      return newInterests;
+  const handlePhotoAdd = (tripId: string | undefined, photo: Omit<PhotoItem, 'id'>) => {
+    if (!tripId) return;
+    setPhotosByTrip(prev => {
+      const list = prev[tripId] ?? [];
+      const newItem: PhotoItem = { id: String(Date.now()), ...photo };
+      return { ...prev, [tripId]: [newItem, ...list] };
     });
   };
 
-
-  const getGroupTypeIcon = (groupType: string) => {
-    switch (groupType) {
-      case 'solo': return '🚶';
-      case 'couple': return '👫';
-      case 'group': return '👥';
-      default: return '👥';
-    }
+  const handlePhotoUpdate = (tripId: string | undefined, photoId: string, updates: Partial<PhotoItem>) => {
+    if (!tripId) return;
+    setPhotosByTrip(prev => {
+      const list = prev[tripId] ?? [];
+      return { ...prev, [tripId]: list.map(p => p.id === photoId ? { ...p, ...updates } : p) };
+    });
   };
+
+  const handlePhotoDelete = (tripId: string | undefined, photoId: string) => {
+    if (!tripId) return;
+    setPhotosByTrip(prev => {
+      const list = prev[tripId] ?? [];
+      return { ...prev, [tripId]: list.filter(p => p.id !== photoId) };
+    });
+  };
+
+  const handleNotesPress = (trip: Trip) => {
+    setSelectedTripForFeature(trip);
+    setIsNotesModalVisible(true);
+  };
+
+  const handleChecklistPress = (trip: Trip) => {
+    setSelectedTripForFeature(trip);
+    setIsChecklistModalVisible(true);
+  };
+
+  const handleMapPress = (trip: Trip) => {
+    setSelectedTripForFeature(trip);
+    setIsMapModalVisible(true);
+  };
+
+  const handleEditScreenClose = () => {
+    setIsEditScreenVisible(false);
+    setEditingTrip(null);
+  };
+
+  const handleEditScreenSave = async (updatedTripData: Partial<Trip>) => {
+    await loadTrips();
+    setIsEditScreenVisible(false);
+    setEditingTrip(null);
+  };
+
+  const handleCloseWeather = () => {
+    setIsWeatherModalVisible(false);
+    setWeatherTrip(null);
+  };
+
+
+  const styles = useMemo(() => createStyles(colors, isCompactMode), [colors, isCompactMode]);
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4285F4" />
-          <Text style={styles.loadingText}>Loading your trips...</Text>
+          <ActivityIndicator size="large" color={colors.primary.main} />
+          <Text style={[styles.loadingText, { color: colors.text.primary }]}>
+            Loading your trips...
+          </Text>
         </View>
       </SafeAreaView>
     );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background.default }]}>
+      {/* Modern Header with Gradient */}
+      <LinearGradient
+        colors={[colors.primary.main, colors.primary.dark]}
+        style={styles.headerGradient}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>🗺️ Saved Trips</Text>
-          <Text style={styles.subtitle}>
-            {trips.length} {trips.length === 1 ? 'trip' : 'trips'} saved
-          </Text>
-        </View>
-
-        {trips.length === 0 ? (
-          <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>✈️</Text>
-            <Text style={styles.emptyTitle}>No trips saved yet</Text>
-            <Text style={styles.emptySubtitle}>
-              Create your first trip to see it here
-            </Text>
-            <Text style={styles.emptySubtitle}>
-              Switch to the Create tab to plan your first trip
-            </Text>
+          <View style={styles.headerTop}>
+            <View>
+              <Text style={styles.headerTitle} {...getTextProps(t('trips.title'), 'header')}>
+                {t('trips.title')}
+              </Text>
+              <Text style={styles.headerSubtitle} {...getTextProps(t('trips.tripCount'), 'text')}>
+                {filteredTrips.length} {t('trips.of')} {trips.length} {t('trips.trips')}
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.addButton}
+              onPress={() => onNavigateToSetup?.()}
+              {...getButtonProps(t('trips.addNewTrip'))}
+            >
+              <Ionicons name="add" size={24} color={colors.primary.contrastText} />
+            </TouchableOpacity>
           </View>
-        ) : (
-          <View style={styles.tripsContainer}>
-            {trips.map((trip) => (
-              <TouchableOpacity 
-                key={trip.id} 
-                style={styles.tripCard}
-                onPress={() => handleTripCardPress(trip)}
-                activeOpacity={0.7}
-              >
-                <View style={styles.tripHeader}>
-                  <View style={styles.tripActionsContainer}>
-                    <Text style={styles.tripName}>{trip.destination}</Text>
-                    <View style={styles.tripActions}>
-                     {overCapCounts[trip.id] > 0 && (
-                       <View style={styles.overCapBadge}>
-                         <Text style={styles.overCapBadgeText}>{overCapCounts[trip.id]} over-cap day{overCapCounts[trip.id] > 1 ? 's' : ''}</Text>
-                       </View>
-                     )}
-                     
-                     {/* First row of 3 icons */}
-                     <View style={styles.actionRow}>
-                       <TouchableOpacity
-                         style={styles.actionButton}
-                         onPress={() => handleWeatherPress(trip)}
-                       >
-                         <Text style={styles.actionButtonText}>🌤️</Text>
-                       </TouchableOpacity>
-                       <TouchableOpacity
-                         style={styles.actionButton}
-                         onPress={() => handleExpensePress(trip)}
-                       >
-                         <Text style={styles.actionButtonText}>💳</Text>
-                       </TouchableOpacity>
-                       <TouchableOpacity
-                         style={styles.actionButton}
-                         onPress={() => handlePackingPress(trip)}
-                       >
-                         <Text style={styles.actionButtonText}>🎒</Text>
-                       </TouchableOpacity>
-                     </View>
-                     
-                     {/* Second row of 3 icons */}
-                     <View style={styles.actionRow}>
-                       <TouchableOpacity
-                         style={styles.actionButton}
-                         onPress={() => handleSocialPress(trip)}
-                       >
-                         <Text style={styles.actionButtonText}>🤝</Text>
-                       </TouchableOpacity>
-                       <TouchableOpacity
-                         style={styles.actionButton}
-                         onPress={() => handleEditTrip(trip)}
-                       >
-                         <Text style={styles.actionButtonText}>✏️</Text>
-                       </TouchableOpacity>
-                       <TouchableOpacity
-                         style={styles.actionButton}
-                         onPress={() => handleDeleteTrip(trip.id, trip.destination)}
-                       >
-                         <Text style={styles.actionButtonText}>🗑️</Text>
-                       </TouchableOpacity>
-                     </View>
-                    </View>
-                  </View>
-                </View>
-                
-                 <View style={styles.tripDetails}>
-                   <View style={styles.tripDetailRow}>
-                     <Text style={styles.tripDetailLabel}>👥 Group:</Text>
-                     <Text style={styles.tripDetailValue}>
-                       {getGroupTypeIcon(trip.groupType)} {trip.groupType}
-                     </Text>
-                   </View>
-                   {typeof (trip as any).dailySpendCap === 'number' && (trip as any).dailySpendCap != null && (
-                     <View style={styles.tripDetailRow}>
-                       <Text style={styles.tripDetailLabel}>💳 Daily Cap:</Text>
-                       <Text style={styles.tripDetailValue}>
-                         {formatAmount((trip as any).dailySpendCap)}
-                       </Text>
-                     </View>
-                   )}
-                   <View style={styles.tripDetailRow}>
-                     <Text style={styles.tripDetailLabel}>📅 Dates:</Text>
-                     <Text style={styles.tripDetailValue}>
-                       {formatDateRange(trip.checkIn, trip.checkOut)}
-                     </Text>
-                   </View>
-                   <View style={styles.tripDetailRow}>
-                     <Text style={styles.tripDetailLabel}>💰 Budget:</Text>
-                     <Text style={styles.tripDetailValue}>
-                       {formatAmount(trip.budget)}/day
-                     </Text>
-                   </View>
-                   {typeof totalSpendByTrip[trip.id] === 'number' && (
-                     <View style={styles.tripDetailRow}>
-                       <Text style={styles.tripDetailLabel}>🧾 Total Spend:</Text>
-                       <Text style={styles.tripDetailValue}>
-                         {formatAmount(Math.round(totalSpendByTrip[trip.id]))}
-                       </Text>
-                     </View>
-                   )}
-                   <View style={styles.tripDetailRow}>
-                     <Text style={styles.tripDetailLabel}>⚡ Activity:</Text>
-                     <Text style={styles.tripDetailValue}>{trip.activityLevel}%</Text>
-                   </View>
-                   
-                   {/* Weather Widget */}
-                   <View style={styles.weatherContainer}>
-                     <WeatherWidget 
-                       destination={trip.destination} 
-                       compact={true}
-                       onRefresh={() => handleWeatherPress(trip)}
-                     />
-                   </View>
-                      {(spendByTrip[trip.id] && (spendByTrip[trip.id] as any).length > 0) && (
-                        <View style={{ marginTop: 12, marginBottom: 8 }}>
-                          <Text style={{ fontSize: 14, color: '#6B7280', marginBottom: 8, fontWeight: '500' }}>Daily Spending:</Text>
-                          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 20 }}>
-                            {(spendByTrip[trip.id] || []).map(({ day, total }) => {
-                              const cap = (trip as any).dailySpendCap as number | undefined;
-                              const over = typeof cap === 'number' && cap != null ? total > cap : false;
-                              return (
-                                <TouchableOpacity key={`${trip.id}-d${day}`} style={[styles.dayChip, over ? styles.dayChipOver : styles.dayChipOk]} onPress={() => { setSelectedTrip(trip); setIsActivityModalVisible(true); /* pass day via state below */ (setPendingInitialDay as any)?.(day); }}>
-                                  <Text style={styles.dayChipText}>
-                                    D{day}: {formatAmount(total)}{typeof cap==='number' ? `/${formatAmount(cap)}`: ''}
-                                  </Text>
-                                </TouchableOpacity>
-                              );
-                            })}
-                          </ScrollView>
-                        </View>
-                      )}
-                </View>
 
-                <View style={styles.interestsContainer}>
-                  {parseInterests(trip.interests).map((interest, index) => (
-                    <Chip
-                      key={index}
-                      label={interest}
-                      selected={true}
-                      onPress={() => {}}
-                    />
+          {/* Search Bar */}
+          <View style={styles.searchContainer}>
+            <View style={styles.searchInputContainer}>
+              <Ionicons name="search" size={20} color={colors.text.tertiary} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder={t('trips.searchPlaceholder')}
+                placeholderTextColor="#000000"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                {...getInputProps(t('trips.searchPlaceholder'), t('trips.searchDescription'))}
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')}>
+                  <Ionicons name="close-circle" size={20} color={colors.text.tertiary} />
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity
+              style={styles.filterButton}
+              onPress={() => setShowFilters(!showFilters)}
+              {...getButtonProps(t('trips.toggleFilters'))}
+            >
+              <Ionicons name="options" size={20} color={colors.primary.contrastText} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Filter Options */}
+          {showFilters && (
+            <Animated.View style={[styles.filtersContainer, { opacity: fadeAnim }]}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.filterChips}>
+                  {[
+                    { key: 'all', label: t('trips.filters.all') },
+                    { key: 'upcoming', label: t('trips.filters.upcoming') },
+                    { key: 'current', label: t('trips.filters.current') },
+                    { key: 'completed', label: t('trips.filters.completed') },
+                  ].map((filter) => (
+                    <TouchableOpacity
+                      key={filter.key}
+                      style={[
+                        styles.filterChip,
+                        filterBy === filter.key && styles.activeFilterChip,
+                      ]}
+                      onPress={() => setFilterBy(filter.key as any)}
+                      {...getButtonProps(`Filter by ${filter.label}`)}
+                    >
+                      <Text
+                        style={[
+                          styles.filterChipText,
+                          filterBy === filter.key && styles.activeFilterChipText,
+                        ]}
+                        {...getTextProps(filter.label, 'button')}
+                      >
+                        {filter.label}
+                      </Text>
+                    </TouchableOpacity>
                   ))}
                 </View>
-
-                <Text style={styles.tripDate}>
-                  Created {formatRelativeDate(trip.createdAt)}
-                </Text>
-              </TouchableOpacity>
+              </ScrollView>
+              
+              <View style={styles.sortContainer}>
+                <Text style={styles.sortLabel} {...getTextProps(t('trips.sortBy'), 'text')}>{t('trips.sortBy')}:</Text>
+                <View style={styles.sortOptions}>
+                  {[
+                    { key: 'date', label: t('trips.sortOptions.date'), icon: 'calendar' },
+                    { key: 'destination', label: t('trips.sortOptions.destination'), icon: 'location' },
+                    { key: 'budget', label: t('trips.sortOptions.budget'), icon: 'cash' },
+                  ].map((sort) => (
+                    <TouchableOpacity
+                      key={sort.key}
+                      style={[
+                        styles.sortOption,
+                        sortBy === sort.key && styles.activeSortOption,
+                      ]}
+                      onPress={() => setSortBy(sort.key as any)}
+                      {...getButtonProps(`Sort by ${sort.label}`)}
+                    >
+                      <Ionicons
+                        name={sort.icon as any}
+                        size={16}
+                        color={sortBy === sort.key ? colors.primary.contrastText : colors.text.secondary}
+                      />
+                      <Text
+                        style={[
+                          styles.sortOptionText,
+                          sortBy === sort.key && styles.activeSortOptionText,
+                        ]}
+                        {...getTextProps(sort.label, 'button')}
+                      >
+                        {sort.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </Animated.View>
+          )}
+        </View>
+      </LinearGradient>
+      
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.contentContainer}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor={colors.primary.main}
+          />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {filteredTrips.length === 0 ? (
+          <Animated.View 
+            style={[
+              styles.emptyState,
+              { 
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
+            ]}
+          >
+            <View style={styles.emptyIconContainer}>
+              <Ionicons name="airplane-outline" size={80} color={colors.text.tertiary} />
+            </View>
+            <Text style={[styles.emptyTitle, { color: colors.text.primary }]} {...getTextProps(t('trips.empty.title'), 'header')}>
+              {searchQuery ? t('trips.noResults') : t('trips.empty.title')}
+            </Text>
+            <Text style={[styles.emptyDescription, { color: colors.text.secondary }]} {...getTextProps(t('trips.empty.description'), 'text')}>
+              {searchQuery 
+                ? t('trips.noResults.description')
+                : t('trips.empty.description')
+              }
+            </Text>
+            {!searchQuery && (
+              <EnhancedButton
+                title={t('trips.createFirstTrip')}
+                onPress={() => { /* Navigate to SetupScreen */ }}
+                variant="primary"
+                size="large"
+                icon="add"
+                fullWidth
+                style={styles.createTripButton}
+              />
+            )}
+          </Animated.View>
+        ) : (
+          <Animated.View 
+            style={[
+              styles.tripsContainer,
+              { 
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }]
+              }
+            ]}
+          >
+            {filteredTrips.map((trip, index) => (
+              <Animated.View
+                key={trip.id}
+                style={{
+                  opacity: fadeAnim,
+                  transform: [{
+                    translateY: slideAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, 20 * index],
+                    })
+                  }]
+                }}
+              >
+                <TripCard
+                  trip={trip}
+                  isCompactMode={isCompactMode}
+                  onPress={() => handleTripCardPress(trip)}
+                  onWeatherPress={() => handleWeatherPress(trip)}
+                  onExpensePress={() => handleExpensePress(trip)}
+                  onPackingPress={() => handlePackingPress(trip)}
+                  onSocialPress={() => handleSocialPress(trip)}
+                  onEditPress={() => handleEditTrip(trip)}
+                  onDeletePress={() => handleDeleteTrip(trip.id, trip.destination)}
+                  onAddActivityPress={() => handleAddActivity(trip)}
+                  onTimelinePress={() => handleTimelinePress(trip)}
+                  onPhotosPress={() => handlePhotosPress(trip)}
+                  onNotesPress={() => handleNotesPress(trip)}
+                  onChecklistPress={() => handleChecklistPress(trip)}
+                  onMapPress={() => handleMapPress(trip)}
+                  onAnalyticsPress={() => handleAnalyticsPress()}
+                  totalSpend={totalSpendByTrip[trip.id]}
+                  overCapCount={overCapCounts[trip.id]}
+                  formatAmount={formatAmount}
+                />
+              </Animated.View>
             ))}
-          </View>
+          </Animated.View>
         )}
       </ScrollView>
 
-      {/* Edit Modal */}
-      <Modal
-        visible={isEditModalVisible}
-        animationType="slide"
-        presentationStyle="pageSheet"
-      >
-        <SafeAreaView style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <TouchableOpacity
-              style={styles.modalCancelButton}
-              onPress={() => setIsEditModalVisible(false)}
-            >
-              <Text style={styles.modalCancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            <Text style={styles.modalTitle}>Edit Trip</Text>
-            <TouchableOpacity
-              style={[styles.modalSaveButton, isLoading && styles.modalSaveButtonDisabled]}
-              onPress={handleSaveEdit}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="#FFFFFF" size="small" />
-              ) : (
-                <Text style={styles.modalSaveButtonText}>Save</Text>
-              )}
-            </TouchableOpacity>
+      {/* Modals */}
+      {weatherTrip && isWeatherModalVisible && (
+        <Modal
+          visible={isWeatherModalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={handleCloseWeather}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <WeatherWidget 
+                destination={weatherTrip?.destination || ''} 
+                onDismiss={handleCloseWeather}
+              />
+            </View>
           </View>
+        </Modal>
+      )}
 
-          <ScrollView style={styles.modalContent}>
-            <Section title="Where are you going?">
-              <FormInput
-                placeholder="e.g., Budapest, Prague, Barcelona..."
-                value={editDestination}
-                onChangeText={(text) => {
-                  setEditDestination(text);
-                  if (editTouched.editDestination) handleEditFieldBlur('editDestination');
-                }}
-                onBlur={() => handleEditFieldBlur('editDestination')}
-                error={editTouched.editDestination ? editErrors.editDestination : undefined}
-              />
-            </Section>
+      {expenseTrip && (
+        <ExpenseTracker
+          tripId={expenseTrip.id}
+          visible={isExpenseModalVisible}
+          onClose={() => {
+            setIsExpenseModalVisible(false);
+            setExpenseTrip(null);
+          }}
+        />
+      )}
 
-            <Section title="When are you traveling?">
-              <View style={styles.row}>
-                <View style={styles.col}>
-                  <DatePicker
-                    value={editCheckIn}
-                    onChange={(date) => {
-                      setEditCheckIn(date);
-                      if (editTouched.editCheckIn) handleEditFieldBlur('editCheckIn');
-                    }}
-                    placeholder="Select check-in date"
-                    error={editTouched.editCheckIn ? editErrors.editCheckIn : undefined}
-                    mode="date"
-                  />
-                </View>
-                <View style={styles.col}>
-                  <DatePicker
-                    value={editCheckOut}
-                    onChange={(date) => {
-                      setEditCheckOut(date);
-                      if (editTouched.editCheckOut) handleEditFieldBlur('editCheckOut');
-                    }}
-                    placeholder="Select check-out date"
-                    error={editTouched.editCheckOut ? editErrors.editCheckOut : undefined}
-                    minimumDate={editCheckIn ? new Date(editCheckIn) : undefined}
-                    mode="date"
-                  />
-                </View>
-              </View>
-            </Section>
+      {packingTrip && (
+        <PackingAssistant
+          tripId={packingTrip.id}
+          destination={packingTrip.destination}
+          visible={isPackingModalVisible}
+          onClose={() => {
+            setIsPackingModalVisible(false);
+            setPackingTrip(null);
+          }}
+        />
+      )}
 
-            <Section title="What's your budget?">
-              <PreferenceSlider
-                value={editBudget}
-                onValueChange={setEditBudget}
-                min={10}
-                max={1000}
-                step={10}
-                label="Budget per day"
-                unit="$"
-                onBlur={() => handleEditFieldBlur('editBudget')}
-                error={editTouched.editBudget ? editErrors.editBudget : undefined}
-              />
-            </Section>
+      {socialTrip && (
+        <SocialSharing
+          trip={socialTrip}
+          visible={isSocialModalVisible}
+          onClose={() => {
+            setIsSocialModalVisible(false);
+            setSocialTrip(null);
+          }}
+        />
+      )}
 
-            <Section title="Daily spend cap (optional)">
-              <FormInput
-                placeholder="e.g. 150"
-                keyboardType="numeric"
-                value={editDailyCap == null ? '' : String(editDailyCap)}
-                onChangeText={(text) => {
-                  const n = parseFloat(text);
-                  setEditDailyCap(isNaN(n) ? undefined : n);
-                  if (editTouched.editDailyCap) handleEditFieldBlur('editDailyCap');
-                }}
-                onBlur={() => handleEditFieldBlur('editDailyCap')}
-                error={editTouched.editDailyCap ? editErrors.editDailyCap : undefined}
-              />
-            </Section>
+      <AnalyticsDashboard
+        visible={isAnalyticsModalVisible}
+        trips={trips}
+        onClose={() => setIsAnalyticsModalVisible(false)}
+      />
 
-            <Section title="How active do you want to be?">
-              <PreferenceSlider
-                value={editActivityLevel}
-                onValueChange={setEditActivityLevel}
-                min={0}
-                max={100}
-                step={5}
-                label="Activity level"
-                unit="%"
-                onBlur={() => handleEditFieldBlur('editActivityLevel')}
-                error={editTouched.editActivityLevel ? editErrors.editActivityLevel : undefined}
-              />
-            </Section>
+      <SmartRecommendations
+        visible={isRecommendationsModalVisible}
+        trips={trips}
+        onClose={() => setIsRecommendationsModalVisible(false)}
+      />
 
-            <Section title="Who's traveling?">
-              <GroupTypeSelector
-                selectedGroupType={editSelectedGroupType}
-                onGroupTypeChange={setEditSelectedGroupType}
-              />
-            </Section>
+      {selectedTripForFeature && (
+        <>
+          <TripTimeline
+            tripId={selectedTripForFeature.id}
+            events={[]} // Mock data - in real app, this would come from state
+            onEventUpdate={() => {}} // Mock handlers
+            onEventAdd={() => {}}
+            onEventDelete={() => {}}
+            visible={isTimelineModalVisible}
+            onClose={() => {
+              setIsTimelineModalVisible(false);
+              setSelectedTripForFeature(null);
+            }}
+          />
 
-            <Section title="What interests you?">
-              <View style={styles.interestsContainer}>
-                {interests.map((interest) => (
-                  <Chip
-                    key={interest.id}
-                    label={interest.label}
-                    selected={editSelectedInterests.includes(interest.id)}
-                    onPress={() => handleEditInterestToggle(interest.id)}
-                  />
-                ))}
-              </View>
-              {editTouched.editSelectedInterests && editErrors.editSelectedInterests && (
-                <Text style={styles.errorText}>{editErrors.editSelectedInterests}</Text>
-              )}
-            </Section>
-          </ScrollView>
-        </SafeAreaView>
-      </Modal>
+          <TripPhotos
+            tripId={selectedTripForFeature?.id ?? ''}
+            photos={selectedTripForFeature ? (photosByTrip[selectedTripForFeature.id] ?? []) : []}
+            onPhotoAdd={(p) => handlePhotoAdd(selectedTripForFeature?.id, p)}
+            onPhotoUpdate={(photoId, updates) => handlePhotoUpdate(selectedTripForFeature?.id, photoId, updates)}
+            onPhotoDelete={(photoId) => handlePhotoDelete(selectedTripForFeature?.id, photoId)}
+            visible={isPhotosModalVisible}
+            onClose={() => {
+              setIsPhotosModalVisible(false);
+              setSelectedTripForFeature(null);
+            }}
+          />
 
-       {/* Activity Management Modal */}
-       {selectedTrip && (
-         <Modal
-           visible={isActivityModalVisible}
-           animationType="slide"
-           presentationStyle="pageSheet"
-         >
-           <ActivityManagementScreen
-             trip={selectedTrip}
-             onClose={handleCloseActivityModal}
-             initialDay={pendingInitialDay}
-           />
-         </Modal>
-       )}
+          <TripNotes
+            tripId={selectedTripForFeature.id}
+            notes={[]} // Mock data - in real app, this would come from state
+            onNoteAdd={() => {}} // Mock handlers
+            onNoteUpdate={() => {}}
+            onNoteDelete={() => {}}
+            visible={isNotesModalVisible}
+            onClose={() => {
+              setIsNotesModalVisible(false);
+              setSelectedTripForFeature(null);
+            }}
+          />
 
-       {/* Weather Modal */}
-       {weatherTrip && (
-         <Modal
-           visible={isWeatherModalVisible}
-           animationType="slide"
-           presentationStyle="pageSheet"
-         >
-           <SafeAreaView style={styles.modalContainer}>
-             <View style={styles.modalHeader}>
-               <Text style={styles.modalTitle}>Weather for {weatherTrip.destination}</Text>
-               <TouchableOpacity onPress={handleCloseWeatherModal}>
-                 <Text style={styles.modalCancelButtonText}>Close</Text>
-               </TouchableOpacity>
-             </View>
-             <WeatherWidget destination={weatherTrip.destination} />
-           </SafeAreaView>
-         </Modal>
-       )}
+          <TripChecklist
+            tripId={selectedTripForFeature.id}
+            items={[]} // Mock data - in real app, this would come from state
+            onItemAdd={() => {}} // Mock handlers
+            onItemUpdate={() => {}}
+            onItemDelete={() => {}}
+            visible={isChecklistModalVisible}
+            onClose={() => {
+              setIsChecklistModalVisible(false);
+              setSelectedTripForFeature(null);
+            }}
+          />
 
-          {/* Expense Tracker Modal */}
-          {expenseTrip && (
-            <ExpenseTracker
-              tripId={expenseTrip.id}
-              visible={isExpenseModalVisible}
-              onClose={handleCloseExpenseModal}
-            />
-          )}
+          <TripMap
+            tripId={selectedTripForFeature.id}
+            locations={[]} // Mock data - in real app, this would come from state
+            onLocationAdd={() => {}} // Mock handlers
+            onLocationUpdate={() => {}}
+            onLocationDelete={() => {}}
+            visible={isMapModalVisible}
+            onClose={() => {
+              setIsMapModalVisible(false);
+              setSelectedTripForFeature(null);
+            }}
+          />
+        </>
+      )}
 
-          {/* Packing Assistant Modal */}
-          {packingTrip && (
-            <PackingAssistant
-              tripId={packingTrip.id}
-              destination={packingTrip.destination}
-              visible={isPackingModalVisible}
-              onClose={handleClosePackingModal}
-            />
-          )}
+      {/* Edit Trip Screen */}
+      {isEditScreenVisible && editingTrip && (
+        <EditTripScreen
+          trip={editingTrip}
+          onClose={handleEditScreenClose}
+          onSave={handleEditScreenSave}
+        />
+      )}
 
-          {/* Social Sharing Modal */}
-          {socialTrip && (
-            <SocialSharing
-              trip={socialTrip}
-              visible={isSocialModalVisible}
-              onClose={handleCloseSocialModal}
-            />
-          )}
+      <ActivityModal
+        visible={isActivityModalVisible}
+        onClose={() => {
+          setIsActivityModalVisible(false);
+          setSelectedTripForActivity(null);
+          setEditingActivity(null);
+        }}
+        onSave={handleSaveActivity}
+        trip={selectedTripForActivity}
+        editingActivity={editingActivity}
+      />
+    </SafeAreaView>
+  );
+};
 
-        </SafeAreaView>
-      );
-    };
-
-const styles = StyleSheet.create({
+const createStyles = (colors: any, isCompactMode: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+  },
+  headerGradient: {
+    paddingTop: professionalSpacing[2],
+    paddingBottom: professionalSpacing[6],
+  },
+  header: {
+    paddingHorizontal: professionalSpacing[6],
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: professionalSpacing[6],
+  },
+  headerTitle: {
+    ...designSystem.textStyles.h1,
+    color: colors.primary.contrastText,
+    marginBottom: professionalSpacing[1],
+  },
+  headerSubtitle: {
+    ...designSystem.textStyles.bodyLarge,
+    color: colors.primary.contrastText,
+    opacity: 0.8,
+  },
+  addButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...professionalShadows.sm,
+  },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: professionalSpacing[3],
+  },
+  searchInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: professionalBorderRadius.lg,
+    paddingHorizontal: professionalSpacing[4],
+    paddingVertical: professionalSpacing[3],
+    gap: professionalSpacing[3],
+  },
+  searchInput: {
+    flex: 1,
+    ...designSystem.textStyles.body,
+    color: colors.primary.contrastText,
+  },
+  filterButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filtersContainer: {
+    marginTop: professionalSpacing[4],
+    paddingTop: professionalSpacing[4],
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  filterChips: {
+    flexDirection: 'row',
+    gap: professionalSpacing[3],
+    paddingRight: professionalSpacing[6],
+  },
+  filterChip: {
+    paddingHorizontal: professionalSpacing[4],
+    paddingVertical: professionalSpacing[2],
+    borderRadius: professionalBorderRadius.full,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  activeFilterChip: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  filterChipText: {
+    ...designSystem.textStyles.buttonSmall,
+    color: colors.primary.contrastText,
+  },
+  activeFilterChipText: {
+    fontWeight: '600',
+  },
+  sortContainer: {
+    marginTop: professionalSpacing[4],
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: professionalSpacing[4],
+  },
+  sortLabel: {
+    ...designSystem.textStyles.body,
+    color: colors.primary.contrastText,
+    opacity: 0.8,
+  },
+  sortOptions: {
+    flexDirection: 'row',
+    gap: professionalSpacing[2],
+  },
+  sortOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: professionalSpacing[3],
+    paddingVertical: professionalSpacing[2],
+    borderRadius: professionalBorderRadius.md,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    gap: professionalSpacing[2],
+  },
+  activeSortOption: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  sortOptionText: {
+    ...designSystem.textStyles.caption,
+    color: colors.primary.contrastText,
+  },
+  activeSortOptionText: {
+    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
   },
-      scrollContent: {
-        padding: 20,
-        paddingBottom: 40,
-      },
+  contentContainer: {
+    paddingBottom: professionalSpacing[6],
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: designSystem.layout.containerPadding,
   },
   loadingText: {
-    marginTop: 16,
-    fontSize: 16,
-    color: '#6B7280',
+    ...designSystem.textStyles.bodyLarge,
+    marginTop: professionalSpacing[4],
   },
-      header: {
-        marginBottom: 32,
-        paddingHorizontal: 4,
-      },
-  headerTop: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  backButton: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-  },
-  backButtonText: {
-    fontSize: 14,
-    color: '#4285F4',
-    fontWeight: '500',
-  },
-      title: {
-        fontSize: 32,
-        fontWeight: '800',
-        color: '#111827',
-        flex: 1,
-        textAlign: 'center',
-        letterSpacing: -0.5,
-      },
-  placeholder: {
-    width: 60,
-  },
-      subtitle: {
-        fontSize: 18,
-        color: '#6B7280',
-        marginTop: 8,
-        textAlign: 'center',
-      },
-  emptyContainer: {
+  emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
+    padding: designSystem.layout.containerPadding,
+    minHeight: 400,
   },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
+  emptyIconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: colors.surface.secondary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: professionalSpacing[6],
   },
   emptyTitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
-  },
-  emptySubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
+    ...designSystem.textStyles.h2,
+    marginBottom: professionalSpacing[3],
     textAlign: 'center',
-    marginBottom: 24,
+  },
+  emptyDescription: {
+    ...designSystem.textStyles.body,
+    textAlign: 'center',
+    marginBottom: professionalSpacing[8],
+    lineHeight: designSystem.textStyles.body.lineHeight,
+    paddingHorizontal: professionalSpacing[4],
   },
   createTripButton: {
-    backgroundColor: '#4285F4',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
-  },
-  createTripButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+    marginTop: professionalSpacing[4],
   },
   tripsContainer: {
-    gap: 16,
-  },
-      tripCard: {
-        backgroundColor: '#FFFFFF',
-        borderRadius: 12,
-        padding: 16,
-        marginBottom: 12,
-        shadowColor: '#000',
-        shadowOffset: {
-          width: 0,
-          height: 2,
-        },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-        elevation: 4,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-      },
-      tripHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'flex-start',
-        marginBottom: 12,
-      },
-  tripTitleContainer: {
-    flex: 1,
-  },
-      tripTitle: {
-        fontSize: 24,
-        fontWeight: '700',
-        color: '#111827',
-        marginBottom: 8,
-      },
-      tripGroupType: {
-        fontSize: 16,
-        color: '#6B7280',
-        marginTop: 16,
-        marginBottom: 6,
-        textAlign: 'center',
-      },
-      tripCap: {
-        fontSize: 14,
-        color: '#6B7280',
-        marginBottom: 8,
-        fontWeight: '500',
-        textAlign: 'center',
-      },
-      tripActionsContainer: {
-        alignItems: 'center',
-        flex: 1,
-        paddingHorizontal: 20,
-      },
-      tripName: {
-        fontSize: 20,
-        fontWeight: '800',
-        color: '#111827',
-        marginBottom: 12,
-        textAlign: 'center',
-        letterSpacing: -0.3,
-      },
-      tripActions: {
-        alignItems: 'center',
-        gap: 8,
-      },
-      actionRow: {
-        flexDirection: 'row',
-        gap: 12,
-        justifyContent: 'center',
-        marginBottom: 8,
-        paddingHorizontal: 8,
-      },
-  overCapBadge: {
-    backgroundColor: '#FEE2E2',
-    borderColor: '#FCA5A5',
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-  },
-  overCapBadgeText: {
-    color: '#B91C1C',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-      actionButton: {
-        backgroundColor: '#F8F9FA',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 10,
-        marginLeft: 4,
-        minWidth: 42,
-        minHeight: 42,
-        alignItems: 'center',
-        justifyContent: 'center',
-        shadowColor: '#000',
-        shadowOffset: {
-          width: 0,
-          height: 1,
-        },
-        shadowOpacity: 0.05,
-        shadowRadius: 2,
-        elevation: 1,
-      },
-      actionButtonText: {
-        fontSize: 16,
-        fontWeight: '500',
-      },
-   editButton: {
-     backgroundColor: '#F3F4F6',
-     paddingHorizontal: 12,
-     paddingVertical: 8,
-     borderRadius: 6,
-   },
-   editButtonText: {
-     fontSize: 16,
-   },
-   deleteButton: {
-     backgroundColor: '#FEF2F2',
-     paddingHorizontal: 12,
-     paddingVertical: 8,
-     borderRadius: 6,
-   },
-   deleteButtonText: {
-     fontSize: 16,
-   },
-      weatherContainer: {
-        marginTop: 12,
-        marginBottom: 6,
-      },
-      tripDetails: {
-        marginBottom: 12,
-        backgroundColor: '#F8F9FA',
-        padding: 14,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: '#E5E7EB',
-      },
-      tripDetailRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: 8,
-        paddingVertical: 4,
-      },
-      tripDetailLabel: {
-        fontSize: 14,
-        color: '#6B7280',
-        fontWeight: '500',
-      },
-      tripDetailValue: {
-        fontSize: 14,
-        color: '#111827',
-        fontWeight: '600',
-      },
-      dayChip: {
-        backgroundColor: '#E5E7EB',
-        paddingHorizontal: 12,
-        paddingVertical: 8,
-        borderRadius: 20,
-        marginRight: 8,
-        marginBottom: 8,
-      },
-      dayChipOk: {
-        backgroundColor: '#DCFCE7',
-      },
-      dayChipOver: {
-        backgroundColor: '#FEE2E2',
-      },
-      dayChipText: {
-        fontSize: 13,
-        color: '#111827',
-        fontWeight: '600',
-      },
-      interestsContainer: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 8,
-        marginBottom: 12,
-        marginTop: 8,
-        paddingHorizontal: 4,
-      },
-      tripDate: {
-        fontSize: 13,
-        color: '#9CA3AF',
-        textAlign: 'right',
-        marginTop: 8,
-      },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 12,
-    marginTop: 4,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  col: {
-    flex: 1,
-  },
-  // Modal styles
-  modalContainer: {
-    flex: 1,
-    backgroundColor: '#F8F9FA',
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    padding: professionalSpacing[6],
+    gap: professionalSpacing[4],
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    flex: 1,
   },
-  modalCancelButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  modalCancelButtonText: {
-    fontSize: 16,
-    color: '#6B7280',
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-  },
-  modalSaveButton: {
-    backgroundColor: '#4285F4',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  modalSaveButtonDisabled: {
-    backgroundColor: '#9CA3AF',
-  },
-  modalSaveButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalContent: {
-    flex: 1,
-    padding: 16,
+    backgroundColor: colors.surface.primary,
+    borderRadius: professionalBorderRadius.lg,
+    margin: professionalSpacing[4],
+    maxHeight: '90%',
+    width: '95%',
   },
 });

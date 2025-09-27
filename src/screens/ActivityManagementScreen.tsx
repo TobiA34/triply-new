@@ -1183,7 +1183,7 @@ const styles = StyleSheet.create({
   backButtonText: { 
     fontSize: typography.fontSize.xl, 
     color: colors.text.primary,
-    fontFamily: typography.fontFamily.bold,
+      fontFamily: typography?.fontFamily?.bold || 'System',
   },
   headerCenter: { 
     flex: 1, 
@@ -1192,13 +1192,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     lineHeight: typography.lineHeight.lg,
   },
   subtitle: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     lineHeight: typography.lineHeight.sm,
     marginTop: spacing.xs,
@@ -1227,7 +1227,7 @@ const styles = StyleSheet.create({
   addButtonText: {
     color: colors.primary.contrastText,
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     lineHeight: typography.lineHeight.sm,
   },
   scrollView: {
@@ -1244,7 +1244,7 @@ const styles = StyleSheet.create({
   bannerText: {
     color: colors.text.primary,
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     lineHeight: typography.lineHeight.sm,
   },
   bannerInfo: {
@@ -1282,14 +1282,14 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: typography.fontSize.xl,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginBottom: spacing.sm,
     lineHeight: typography.lineHeight.xl,
   },
   emptySubtitle: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     textAlign: 'center',
     lineHeight: typography.lineHeight.base,
@@ -1300,7 +1300,7 @@ const styles = StyleSheet.create({
   },
   dayTitle: {
     fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginBottom: spacing.md,
     paddingBottom: spacing.sm,
@@ -1327,7 +1327,7 @@ const styles = StyleSheet.create({
   },
   activityName: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     lineHeight: typography.lineHeight.base,
     marginBottom: spacing.xs,
@@ -1341,7 +1341,7 @@ const styles = StyleSheet.create({
   },
   activityTypeText: {
     fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.primary.main,
     textTransform: 'uppercase',
     letterSpacing: typography.letterSpacing.wide,
@@ -1358,7 +1358,7 @@ const styles = StyleSheet.create({
   },
   editButtonText: {
     fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.primary.main,
     lineHeight: typography.lineHeight.xs,
   },
@@ -1370,13 +1370,13 @@ const styles = StyleSheet.create({
   },
   deleteButtonText: {
     fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.status.error,
     lineHeight: typography.lineHeight.xs,
   },
   activityDescription: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     marginBottom: spacing.md,
     lineHeight: typography.lineHeight.sm,
@@ -1395,7 +1395,7 @@ const styles = StyleSheet.create({
   },
   activityDetail: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     lineHeight: typography.lineHeight.sm,
     flex: 1,
@@ -1416,12 +1416,12 @@ const styles = StyleSheet.create({
   },
   nudgeText: {
     fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     lineHeight: typography.lineHeight.xs,
   },
   daySpend: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.secondary,
     marginBottom: spacing.sm,
   },

@@ -1,41 +1,71 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-export interface Currency {
-  symbol: string;
-  code: string;
+export type Currency = 'USD' | 'EUR' | 'GBP' | 'JPY' | 'CAD' | 'AUD' | 'CHF' | 'CNY' | 'INR' | 'BRL';
+
+export interface CurrencyInfo {
+  code: Currency;
   name: string;
-  locale: string;
+  symbol: string;
 }
 
-export const CURRENCIES: Record<string, Currency> = {
-  USD: { symbol: '$', code: 'USD', name: 'US Dollar', locale: 'en-US' },
-  EUR: { symbol: '€', code: 'EUR', name: 'Euro', locale: 'en-EU' },
-  GBP: { symbol: '£', code: 'GBP', name: 'British Pound', locale: 'en-GB' },
-  JPY: { symbol: '¥', code: 'JPY', name: 'Japanese Yen', locale: 'ja-JP' },
-  CAD: { symbol: 'C$', code: 'CAD', name: 'Canadian Dollar', locale: 'en-CA' },
-  AUD: { symbol: 'A$', code: 'AUD', name: 'Australian Dollar', locale: 'en-AU' },
-  CHF: { symbol: 'CHF', code: 'CHF', name: 'Swiss Franc', locale: 'de-CH' },
-  CNY: { symbol: '¥', code: 'CNY', name: 'Chinese Yuan', locale: 'zh-CN' },
-  INR: { symbol: '₹', code: 'INR', name: 'Indian Rupee', locale: 'en-IN' },
-  BRL: { symbol: 'R$', code: 'BRL', name: 'Brazilian Real', locale: 'pt-BR' },
-};
+export const CURRENCIES: CurrencyInfo[] = [
+  { code: 'USD', name: 'US Dollar', symbol: '$' },
+  { code: 'EUR', name: 'Euro', symbol: '€' },
+  { code: 'GBP', name: 'British Pound', symbol: '£' },
+  { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
+  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
+  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
+  { code: 'CHF', name: 'Swiss Franc', symbol: 'CHF' },
+  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' },
+  { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
+  { code: 'BRL', name: 'Brazilian Real', symbol: 'R$' },
+];
 
 interface CurrencyContextType {
   currency: Currency;
   setCurrency: (currency: Currency) => void;
   formatAmount: (amount: number) => string;
-  getCurrencySymbol: () => string;
+  convertAmount: (amount: number, fromCurrency: Currency, toCurrency: Currency) => number;
+  getCurrencySymbol: (currency: Currency) => string;
+  getCurrencyInfo: (currency: Currency) => CurrencyInfo;
 }
 
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
+
+// Exchange rates (simplified - in a real app, these would be fetched from an API)
+const exchangeRates: Record<Currency, number> = {
+  USD: 1.0,
+  EUR: 0.85,
+  GBP: 0.73,
+  JPY: 110.0,
+  CAD: 1.25,
+  AUD: 1.35,
+  CHF: 0.92,
+  CNY: 6.45,
+  INR: 74.0,
+  BRL: 5.2,
+};
+
+const currencySymbols: Record<Currency, string> = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+  JPY: '¥',
+  CAD: 'C$',
+  AUD: 'A$',
+  CHF: 'CHF',
+  CNY: '¥',
+  INR: '₹',
+  BRL: 'R$',
+};
 
 interface CurrencyProviderProps {
   children: ReactNode;
 }
 
 export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) => {
-  const [currency, setCurrencyState] = useState<Currency>(CURRENCIES.USD);
+  const [currency, setCurrencyState] = useState<Currency>('USD');
 
   useEffect(() => {
     loadCurrency();
@@ -43,48 +73,56 @@ export const CurrencyProvider: React.FC<CurrencyProviderProps> = ({ children }) 
 
   const loadCurrency = async () => {
     try {
-      const savedCurrency = await AsyncStorage.getItem('selectedCurrency');
-      if (savedCurrency) {
-        const parsedCurrency = JSON.parse(savedCurrency);
-        setCurrencyState(parsedCurrency);
+      const savedCurrency = await AsyncStorage.getItem('currency');
+      if (savedCurrency && Object.keys(exchangeRates).includes(savedCurrency)) {
+        setCurrencyState(savedCurrency as Currency);
       }
     } catch (error) {
-      console.error('Error loading currency:', error);
+      console.error('Failed to load currency:', error);
     }
   };
 
   const setCurrency = async (newCurrency: Currency) => {
     try {
       setCurrencyState(newCurrency);
-      await AsyncStorage.setItem('selectedCurrency', JSON.stringify(newCurrency));
+      await AsyncStorage.setItem('currency', newCurrency);
     } catch (error) {
-      console.error('Error saving currency:', error);
+      console.error('Failed to save currency:', error);
     }
   };
 
   const formatAmount = (amount: number): string => {
-    try {
-      return new Intl.NumberFormat(currency.locale, {
-        style: 'currency',
-        currency: currency.code,
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 2,
-      }).format(amount);
-    } catch (error) {
-      // Fallback formatting
-      return `${currency.symbol}${amount.toFixed(2)}`;
-    }
+    const symbol = currencySymbols[currency];
+    const formattedAmount = amount.toLocaleString('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return `${symbol}${formattedAmount}`;
   };
 
-  const getCurrencySymbol = (): string => {
-    return currency.symbol;
+  const convertAmount = (amount: number, fromCurrency: Currency, toCurrency: Currency): number => {
+    if (fromCurrency === toCurrency) return amount;
+    
+    // Convert to USD first, then to target currency
+    const usdAmount = amount / exchangeRates[fromCurrency];
+    return usdAmount * exchangeRates[toCurrency];
+  };
+
+  const getCurrencySymbol = (currency: Currency): string => {
+    return currencySymbols[currency];
+  };
+
+  const getCurrencyInfo = (currency: Currency): CurrencyInfo => {
+    return CURRENCIES.find(c => c.code === currency) || CURRENCIES[0];
   };
 
   const value: CurrencyContextType = {
     currency,
     setCurrency,
     formatAmount,
+    convertAmount,
     getCurrencySymbol,
+    getCurrencyInfo,
   };
 
   return (

@@ -8,7 +8,8 @@ import {
   ScrollView,
   SafeAreaView,
 } from 'react-native';
-import { useCurrency, CURRENCIES, Currency } from '../contexts/CurrencyContext';
+import { useCurrency, CURRENCIES, Currency, CurrencyInfo } from '../contexts/CurrencyContext';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 interface CurrencySelectorProps {
   visible: boolean;
@@ -16,18 +17,21 @@ interface CurrencySelectorProps {
 }
 
 export const CurrencySelector: React.FC<CurrencySelectorProps> = ({ visible, onClose }) => {
-  const { currency, setCurrency } = useCurrency();
-  const [selectedCurrency, setSelectedCurrency] = useState<Currency>(currency);
+  const { currency, setCurrency, getCurrencyInfo } = useCurrency();
+  const colors = useThemeColors();
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyInfo>(getCurrencyInfo(currency));
 
   const handleSave = () => {
-    setCurrency(selectedCurrency);
+    setCurrency(selectedCurrency.code);
     onClose();
   };
 
   const handleCancel = () => {
-    setSelectedCurrency(currency);
+    setSelectedCurrency(getCurrencyInfo(currency));
     onClose();
   };
+
+  const styles = createStyles(colors);
 
   return (
     <Modal
@@ -74,10 +78,10 @@ export const CurrencySelector: React.FC<CurrencySelectorProps> = ({ visible, onC
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background.paper,
   },
   header: {
     flexDirection: 'row',
@@ -86,21 +90,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    backgroundColor: '#FFFFFF',
+    borderBottomColor: colors.border.light,
+    backgroundColor: colors.surface.primary,
   },
   cancelButton: {
     fontSize: 16,
-    color: '#6B7280',
+    color: colors.text.secondary,
   },
   title: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.text.primary,
   },
   saveButton: {
     fontSize: 16,
-    color: '#4285F4',
+    color: colors.primary.main,
     fontWeight: '600',
   },
   content: {
@@ -113,15 +117,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     paddingHorizontal: 16,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.primary,
     borderRadius: 12,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: colors.border.light,
   },
   selectedCurrency: {
-    borderColor: '#4285F4',
-    backgroundColor: '#F0F7FF',
+    borderColor: colors.primary.main,
+    backgroundColor: colors.primary.light + '20',
   },
   currencyInfo: {
     flexDirection: 'row',
@@ -131,7 +135,7 @@ const styles = StyleSheet.create({
   currencySymbol: {
     fontSize: 24,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.text.primary,
     marginRight: 12,
     minWidth: 40,
   },
@@ -141,16 +145,16 @@ const styles = StyleSheet.create({
   currencyCode: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#111827',
+    color: colors.text.primary,
     marginBottom: 2,
   },
   currencyName: {
     fontSize: 14,
-    color: '#6B7280',
+    color: colors.text.secondary,
   },
   checkmark: {
     fontSize: 20,
-    color: '#4285F4',
+    color: colors.primary.main,
     fontWeight: '600',
   },
 });

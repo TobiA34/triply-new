@@ -83,13 +83,13 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     lineHeight: typography.lineHeight.base,
   },
   description: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     lineHeight: typography.lineHeight.sm,
     marginTop: spacing.xs,
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.bold,
+      fontFamily: typography?.fontFamily?.bold || 'System',
     color: colors.primary.main,
     lineHeight: typography.lineHeight.lg,
   },
@@ -127,7 +127,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.status.error,
     fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     marginTop: spacing.sm,
     lineHeight: typography.lineHeight.xs,
   },

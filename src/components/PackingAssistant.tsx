@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useLocalization } from '../contexts/LocalizationContext';
 import {
   PackingItem,
   PackingCategory,
@@ -38,6 +39,7 @@ export const PackingAssistant: React.FC<PackingAssistantProps> = ({
   visible,
   onClose,
 }) => {
+  const { t } = useLocalization();
   const [packingItems, setPackingItems] = useState<PackingItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -59,7 +61,7 @@ export const PackingAssistant: React.FC<PackingAssistantProps> = ({
       setPackingItems(items);
     } catch (error) {
       console.error('Error loading packing list:', error);
-      Alert.alert('Error', 'Failed to load packing list');
+      Alert.alert(t('common.error'), t('alert.loadPackingListError'));
     } finally {
       setLoading(false);
     }
@@ -70,10 +72,10 @@ export const PackingAssistant: React.FC<PackingAssistantProps> = ({
     try {
       const items = await generatePackingList(tripId, destination);
       setPackingItems(items);
-      Alert.alert('Success', 'Packing list generated based on weather and destination!');
+      Alert.alert(t('common.success'), t('alert.packingListGenerated'));
     } catch (error) {
       console.error('Error generating packing list:', error);
-      Alert.alert('Error', 'Failed to generate packing list');
+      Alert.alert(t('common.error'), t('alert.generatePackingListError'));
     } finally {
       setIsGenerating(false);
     }
@@ -87,18 +89,18 @@ export const PackingAssistant: React.FC<PackingAssistantProps> = ({
       );
     } catch (error) {
       console.error('Error updating packing item:', error);
-      Alert.alert('Error', 'Failed to update item');
+      Alert.alert(t('common.error'), t('alert.updateItemError'));
     }
   };
 
   const handleDeleteItem = async (itemId: string) => {
     Alert.alert(
-      'Delete Item',
-      'Are you sure you want to delete this item?',
+      t('alert.deleteItem'),
+      t('alert.deleteItemConfirm'),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Delete',
+          text: t('common.delete'),
           style: 'destructive',
           onPress: async () => {
             try {
@@ -106,7 +108,7 @@ export const PackingAssistant: React.FC<PackingAssistantProps> = ({
               setPackingItems(prev => prev.filter(item => item.id !== itemId));
             } catch (error) {
               console.error('Error deleting packing item:', error);
-              Alert.alert('Error', 'Failed to delete item');
+              Alert.alert(t('common.error'), t('alert.deleteItemError'));
             }
           },
         },
@@ -116,7 +118,7 @@ export const PackingAssistant: React.FC<PackingAssistantProps> = ({
 
   const handleAddCustomItem = async () => {
     if (!newItemName.trim()) {
-      Alert.alert('Error', 'Please enter an item name');
+      Alert.alert(t('common.error'), t('alert.enterItemName'));
       return;
     }
 
@@ -138,7 +140,7 @@ export const PackingAssistant: React.FC<PackingAssistantProps> = ({
       setShowAddItem(false);
     } catch (error) {
       console.error('Error adding custom item:', error);
-      Alert.alert('Error', 'Failed to add item');
+      Alert.alert(t('common.error'), t('alert.addItemError'));
     }
   };
 
@@ -325,7 +327,7 @@ export const PackingAssistant: React.FC<PackingAssistantProps> = ({
               <Text style={styles.modalTitle}>Add Custom Item</Text>
               <TextInput
                 style={styles.textInput}
-                placeholder="Item name"
+                placeholder={t('trip.itemName')}
                 value={newItemName}
                 onChangeText={setNewItemName}
               />

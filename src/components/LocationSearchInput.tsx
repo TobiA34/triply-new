@@ -190,7 +190,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.primary,
     marginBottom: spacing.sm,
     lineHeight: typography.lineHeight.sm,
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.primary,
     lineHeight: typography.lineHeight.base,
   },
@@ -259,13 +259,13 @@ const styles = StyleSheet.create({
   },
   suggestionName: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.primary,
     lineHeight: typography.lineHeight.base,
   },
   suggestionCountry: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     lineHeight: typography.lineHeight.sm,
     marginTop: 2,
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
   },
   suggestionBadgeText: {
     fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.secondary,
     textTransform: 'uppercase',
     letterSpacing: typography.letterSpacing.wide,
@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   errorText: {
     color: colors.status.error,
     fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     marginTop: spacing.xs,
     lineHeight: typography.lineHeight.xs,
   },

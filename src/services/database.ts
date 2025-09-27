@@ -418,7 +418,7 @@ class DatabaseService {
     const selectQuery = 'SELECT * FROM packing_items WHERE tripId = ? ORDER BY category ASC, name ASC';
     const result = await this.db.getAllAsync(selectQuery, [tripId]);
     return result.map(row => ({
-      ...row,
+      ...(row as any),
       isPacked: Boolean((row as any).isPacked),
       isEssential: Boolean((row as any).isEssential),
       weatherBased: Boolean((row as any).weatherBased),

@@ -66,7 +66,7 @@ export const CurrencyInput: React.FC<CurrencyInputProps> = ({
           onBlur={handleBlur}
           placeholder={placeholder}
           keyboardType="numeric"
-          placeholderTextColor="#9CA3AF"
+          placeholderTextColor="#000000"
         />
       </View>
       {error && <Text style={styles.errorText}>{error}</Text>}
