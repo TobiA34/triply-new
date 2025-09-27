@@ -23,19 +23,19 @@ export const Chip: React.FC<ChipProps> = ({
         return {
           paddingHorizontal: spacing.sm,
           paddingVertical: spacing.xs,
-          fontSize: typography.fontSize.xs,
+          fontSize: typography?.fontSize?.xs || 12,
         };
       case 'lg':
         return {
           paddingHorizontal: spacing.xl,
           paddingVertical: spacing.md,
-          fontSize: typography.fontSize.base,
+          fontSize: typography?.fontSize?.base || 16,
         };
       default:
         return {
           paddingHorizontal: spacing.lg,
           paddingVertical: spacing.sm,
-          fontSize: typography.fontSize.sm,
+          fontSize: typography?.fontSize?.sm || 14,
         };
     }
   };
@@ -89,7 +89,7 @@ const styles = StyleSheet.create({
   label: {
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.primary,
-    lineHeight: typography.lineHeight.sm,
+    lineHeight: typography?.lineHeight?.sm || 20,
   },
   selectedLabel: {
     color: colors.primary.contrastText,

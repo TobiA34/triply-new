@@ -312,7 +312,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   title: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginLeft: spacing.sm,
@@ -328,7 +328,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing['2xl'],
   },
   placeholderText: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     textAlign: 'center',
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing['2xl'],
   },
   loadingText: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     marginTop: spacing.md,
@@ -348,7 +348,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing['2xl'],
   },
   errorText: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.status.error,
     textAlign: 'center',
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   retryButtonText: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.primary.contrastText,
   },
@@ -379,13 +379,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   temperature: {
-    fontSize: typography.fontSize['4xl'],
+    fontSize: typography?.fontSize?.['4xl'] || 32,
       fontFamily: typography?.fontFamily?.bold || 'System',
     color: colors.text.primary,
-    lineHeight: typography.lineHeight['4xl'],
+    lineHeight: typography?.lineHeight?.['4xl'] || 40,
   },
   condition: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     marginTop: spacing.xs,
@@ -400,7 +400,7 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   detailText: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.secondary,
   },
@@ -417,19 +417,19 @@ const styles = StyleSheet.create({
     minWidth: 80,
   },
   forecastDayName: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginBottom: spacing.xs,
   },
   forecastHigh: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginTop: spacing.xs,
   },
   forecastLow: {
-    fontSize: typography.fontSize.xs,
+    fontSize: typography?.fontSize?.xs || 12,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
   },
@@ -440,7 +440,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   precipitationText: {
-    fontSize: typography.fontSize.xs,
+    fontSize: typography?.fontSize?.xs || 12,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
   },

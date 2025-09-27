@@ -38,13 +38,13 @@ const createStyles = (colors: any) => StyleSheet.create({
     padding: 16,
   },
   title: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.primary,
     marginBottom: 4,
   },
   description: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
   },

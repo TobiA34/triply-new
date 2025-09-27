@@ -204,11 +204,11 @@ const createStyles = (colors: any) => StyleSheet.create({
     width: '100%',
   },
   label: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.primary,
     marginBottom: spacing.sm,
-    lineHeight: typography.lineHeight.sm,
+    lineHeight: typography?.lineHeight?.sm || 20,
   },
   selector: {
     flexDirection: 'row',
@@ -232,7 +232,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     flex: 1,
   },
   selectorText: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.primary,
     marginLeft: spacing.sm,
@@ -243,10 +243,10 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   errorText: {
     color: colors.status.error,
-    fontSize: typography.fontSize.xs,
+    fontSize: typography?.fontSize?.xs || 12,
       fontFamily: typography?.fontFamily?.medium || 'System',
     marginTop: spacing.xs,
-    lineHeight: typography.lineHeight.xs,
+    lineHeight: typography?.lineHeight?.xs || 16,
   },
   modalContainer: {
     flex: 1,
@@ -265,7 +265,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     padding: spacing.sm,
   },
   modalTitle: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
   },
@@ -290,7 +290,7 @@ const createStyles = (colors: any) => StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.primary,
     marginLeft: spacing.sm,
@@ -306,7 +306,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     paddingTop: spacing.md,
   },
   sectionTitle: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginBottom: spacing.md,
@@ -330,13 +330,13 @@ const createStyles = (colors: any) => StyleSheet.create({
     flex: 1,
   },
   resultName: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.primary,
     marginBottom: 2,
   },
   resultCountry: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
   },

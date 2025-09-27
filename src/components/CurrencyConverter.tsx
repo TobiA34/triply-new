@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   title: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginLeft: spacing.sm,
@@ -355,7 +355,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing['2xl'],
   },
   placeholderText: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     textAlign: 'center',
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   loadingText: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     marginLeft: spacing.sm,
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   errorText: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.status.error,
     marginLeft: spacing.sm,
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   currencyLabel: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.primary,
     flex: 1,
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
     marginRight: spacing.sm,
   },
   currencyCode: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     flex: 1,
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   amountLabel: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.primary,
     marginBottom: spacing.sm,
@@ -446,14 +446,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   currencySymbol: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginRight: spacing.sm,
   },
   amountInput: {
     flex: 1,
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.primary,
     paddingVertical: spacing.md,
@@ -465,19 +465,19 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   resultLabel: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.secondary,
     marginBottom: spacing.xs,
   },
   resultAmount: {
-    fontSize: typography.fontSize['3xl'],
+    fontSize: typography?.fontSize?.['3xl'] || 28,
       fontFamily: typography?.fontFamily?.bold || 'System',
     color: colors.primary.main,
     marginBottom: spacing.sm,
   },
   exchangeRate: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
   },
@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border.light,
   },
   pickerTitle: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
   },
@@ -534,12 +534,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   currencyItemCode: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
   },
   currencyItemName: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     marginTop: spacing.xs,

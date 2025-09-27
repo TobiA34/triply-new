@@ -52,6 +52,12 @@ const createTypography = () => ({
     wide: 0.5,
     wider: 1,
   },
+  fontWeight: {
+    normal: '400',
+    medium: '500',
+    semibold: '600',
+    bold: '700',
+  },
 });
 
 // Export the typography object with safety checks

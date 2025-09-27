@@ -1181,7 +1181,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   backButtonText: { 
-    fontSize: typography.fontSize.xl, 
+    fontSize: typography?.fontSize?.xl || 20, 
     color: colors.text.primary,
       fontFamily: typography?.fontFamily?.bold || 'System',
   },
@@ -1191,16 +1191,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
-    lineHeight: typography.lineHeight.lg,
+    lineHeight: typography?.lineHeight?.lg || 28,
   },
   subtitle: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
-    lineHeight: typography.lineHeight.sm,
+    lineHeight: typography?.lineHeight?.sm || 20,
     marginTop: spacing.xs,
   },
   headerActions: { 
@@ -1214,7 +1214,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   actionButtonText: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
     color: colors.text.secondary,
   },
   addButton: {
@@ -1226,9 +1226,9 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     color: colors.primary.contrastText,
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.semibold || 'System',
-    lineHeight: typography.lineHeight.sm,
+    lineHeight: typography?.lineHeight?.sm || 20,
   },
   scrollView: {
     flex: 1,
@@ -1243,9 +1243,9 @@ const styles = StyleSheet.create({
   },
   bannerText: {
     color: colors.text.primary,
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.semibold || 'System',
-    lineHeight: typography.lineHeight.sm,
+    lineHeight: typography?.lineHeight?.sm || 20,
   },
   bannerInfo: {
     backgroundColor: colors.status.info + '20',
@@ -1281,32 +1281,32 @@ const styles = StyleSheet.create({
     fontSize: 40,
   },
   emptyTitle: {
-    fontSize: typography.fontSize.xl,
+    fontSize: typography?.fontSize?.xl || 20,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginBottom: spacing.sm,
-    lineHeight: typography.lineHeight.xl,
+    lineHeight: typography?.lineHeight?.xl || 28,
   },
   emptySubtitle: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     textAlign: 'center',
-    lineHeight: typography.lineHeight.base,
+    lineHeight: typography?.lineHeight?.base || 24,
     maxWidth: 280,
   },
   daySection: {
     marginBottom: spacing['3xl'],
   },
   dayTitle: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginBottom: spacing.md,
     paddingBottom: spacing.sm,
     borderBottomWidth: 2,
     borderBottomColor: colors.primary.main,
-    lineHeight: typography.lineHeight.lg,
+    lineHeight: typography?.lineHeight?.lg || 28,
   },
   activityCard: {
     backgroundColor: colors.surface.primary,
@@ -1326,10 +1326,10 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   activityName: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
-    lineHeight: typography.lineHeight.base,
+    lineHeight: typography?.lineHeight?.base || 24,
     marginBottom: spacing.xs,
   },
   activityTypeBadge: {
@@ -1340,11 +1340,11 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   activityTypeText: {
-    fontSize: typography.fontSize.xs,
+    fontSize: typography?.fontSize?.xs || 12,
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.primary.main,
     textTransform: 'uppercase',
-    letterSpacing: typography.letterSpacing.wide,
+    letterSpacing: typography?.letterSpacing?.wide || 0.5,
   },
   activityActions: {
     flexDirection: 'row',
@@ -1357,10 +1357,10 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   editButtonText: {
-    fontSize: typography.fontSize.xs,
+    fontSize: typography?.fontSize?.xs || 12,
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.primary.main,
-    lineHeight: typography.lineHeight.xs,
+    lineHeight: typography?.lineHeight?.xs || 16,
   },
   deleteButton: {
     backgroundColor: colors.status.error + '20',
@@ -1369,17 +1369,17 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
   },
   deleteButtonText: {
-    fontSize: typography.fontSize.xs,
+    fontSize: typography?.fontSize?.xs || 12,
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.status.error,
-    lineHeight: typography.lineHeight.xs,
+    lineHeight: typography?.lineHeight?.xs || 16,
   },
   activityDescription: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     marginBottom: spacing.md,
-    lineHeight: typography.lineHeight.sm,
+    lineHeight: typography?.lineHeight?.sm || 20,
   },
   activityDetails: {
     gap: spacing.xs,
@@ -1390,14 +1390,14 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   detailIcon: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
     width: 20,
   },
   activityDetail: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
-    lineHeight: typography.lineHeight.sm,
+    lineHeight: typography?.lineHeight?.sm || 20,
     flex: 1,
   },
   nudgeRow: {
@@ -1415,12 +1415,12 @@ const styles = StyleSheet.create({
     backgroundColor: colors.status.error + '20',
   },
   nudgeText: {
-    fontSize: typography.fontSize.xs,
+    fontSize: typography?.fontSize?.xs || 12,
       fontFamily: typography?.fontFamily?.medium || 'System',
-    lineHeight: typography.lineHeight.xs,
+    lineHeight: typography?.lineHeight?.xs || 16,
   },
   daySpend: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.secondary,
     marginBottom: spacing.sm,

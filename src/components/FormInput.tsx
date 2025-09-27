@@ -56,11 +56,11 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   label: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.primary,
     marginBottom: spacing.sm,
-    lineHeight: typography.lineHeight.sm,
+    lineHeight: typography?.lineHeight?.sm || 20,
   },
   inputContainer: {
     flexDirection: 'row',
@@ -76,10 +76,10 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: spacing.lg,
     paddingVertical: spacing.md,
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.primary,
-    lineHeight: typography.lineHeight.base,
+    lineHeight: typography?.lineHeight?.base || 24,
   },
   multilineInput: {
     paddingTop: spacing.md,
@@ -95,9 +95,9 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.status.error,
-    fontSize: typography.fontSize.xs,
+    fontSize: typography?.fontSize?.xs || 12,
       fontFamily: typography?.fontFamily?.medium || 'System',
     marginTop: spacing.xs,
-    lineHeight: typography.lineHeight.xs,
+    lineHeight: typography?.lineHeight?.xs || 16,
   },
 });

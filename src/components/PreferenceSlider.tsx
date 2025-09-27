@@ -82,26 +82,26 @@ const styles = StyleSheet.create({
     marginRight: spacing.md,
   },
   label: {
-    fontSize: typography.fontSize.base,
+    fontSize: typography?.fontSize?.base || 16,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
-    lineHeight: typography.lineHeight.base,
+    lineHeight: typography?.lineHeight?.base || 24,
   },
   description: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
-    lineHeight: typography.lineHeight.sm,
+    lineHeight: typography?.lineHeight?.sm || 20,
     marginTop: spacing.xs,
   },
   valueContainer: {
     alignItems: 'flex-end',
   },
   value: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
       fontFamily: typography?.fontFamily?.bold || 'System',
     color: colors.primary.main,
-    lineHeight: typography.lineHeight.lg,
+    lineHeight: typography?.lineHeight?.lg || 28,
   },
   percentageBar: {
     width: 60,
@@ -126,9 +126,9 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.status.error,
-    fontSize: typography.fontSize.xs,
+    fontSize: typography?.fontSize?.xs || 12,
       fontFamily: typography?.fontFamily?.medium || 'System',
     marginTop: spacing.sm,
-    lineHeight: typography.lineHeight.xs,
+    lineHeight: typography?.lineHeight?.xs || 16,
   },
 });

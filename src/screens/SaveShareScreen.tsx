@@ -27,7 +27,7 @@ const createStyles = (colors: any) => StyleSheet.create({
     padding: 20,
   },
   title: {
-    fontSize: typography.fontSize['2xl'],
+    fontSize: typography?.fontSize?.['2xl'] || 24,
       fontFamily: typography?.fontFamily?.bold || 'System',
     color: colors.text.primary,
     marginBottom: 16,

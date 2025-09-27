@@ -30,17 +30,17 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   title: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
       fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
-    lineHeight: typography.lineHeight.lg,
-    letterSpacing: typography.letterSpacing.tight,
+    lineHeight: typography?.lineHeight?.lg || 28,
+    letterSpacing: typography?.letterSpacing?.tight || -0.5,
   },
   subtitle: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
-    lineHeight: typography.lineHeight.sm,
+    lineHeight: typography?.lineHeight?.sm || 20,
     marginTop: spacing.xs,
   },
   content: {

@@ -437,20 +437,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   title: {
-    fontSize: typography.fontSize['4xl'],
+    fontSize: typography?.fontSize?.['4xl'] || 32,
       fontFamily: typography?.fontFamily?.bold || 'System',
     color: colors.text.primary,
     marginBottom: spacing.sm,
     textAlign: 'center',
-    lineHeight: typography.lineHeight['4xl'],
-    letterSpacing: typography.letterSpacing.tight,
+    lineHeight: typography?.lineHeight?.['4xl'] || 40,
+    letterSpacing: typography?.letterSpacing?.tight || -0.5,
   },
   subtitle: {
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     textAlign: 'center',
-    lineHeight: typography.lineHeight.lg,
+    lineHeight: typography?.lineHeight?.lg || 28,
     maxWidth: 280,
   },
   dateRow: {
@@ -468,10 +468,10 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: colors.status.error,
-    fontSize: typography.fontSize.xs,
+    fontSize: typography?.fontSize?.xs || 12,
       fontFamily: typography?.fontFamily?.medium || 'System',
     marginTop: spacing.xs,
-    lineHeight: typography.lineHeight.xs,
+    lineHeight: typography?.lineHeight?.xs || 16,
   },
   saveButton: {
     backgroundColor: colors.primary.main,
@@ -488,9 +488,9 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: colors.primary.contrastText,
-    fontSize: typography.fontSize.lg,
+    fontSize: typography?.fontSize?.lg || 18,
       fontFamily: typography?.fontFamily?.semibold || 'System',
-    lineHeight: typography.lineHeight.lg,
+    lineHeight: typography?.lineHeight?.lg || 28,
   },
   selectedLocationContainer: {
     marginTop: spacing.md,
@@ -505,10 +505,10 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   selectedLocationText: {
-    fontSize: typography.fontSize.sm,
+    fontSize: typography?.fontSize?.sm || 14,
       fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.primary.main,
     marginLeft: spacing.sm,
-    lineHeight: typography.lineHeight.sm,
+    lineHeight: typography?.lineHeight?.sm || 20,
   },
 });
