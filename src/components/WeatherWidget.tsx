@@ -51,6 +51,33 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRef
       
       // OpenWeatherMap API call
       const API_KEY = getWeatherApiKey();
+      
+      // Check if we're in demo mode
+      if (API_KEY === 'demo') {
+        // Show demo data
+        const demoWeatherData: WeatherData = {
+          current: {
+            temperature: 22,
+            condition: 'Clear',
+            humidity: 65,
+            windSpeed: 12,
+            icon: 'sunny',
+          },
+          forecast: [
+            { date: '2024-01-15', day: 'Mon', high: 25, low: 18, condition: 'Clear', icon: 'sunny', precipitation: 0 },
+            { date: '2024-01-16', day: 'Tue', high: 23, low: 16, condition: 'Clouds', icon: 'cloudy', precipitation: 20 },
+            { date: '2024-01-17', day: 'Wed', high: 20, low: 14, condition: 'Rain', icon: 'rainy', precipitation: 80 },
+            { date: '2024-01-18', day: 'Thu', high: 24, low: 17, condition: 'Clear', icon: 'sunny', precipitation: 10 },
+            { date: '2024-01-19', day: 'Fri', high: 26, low: 19, condition: 'Clear', icon: 'sunny', precipitation: 0 },
+          ],
+        };
+        
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setWeatherData(demoWeatherData);
+        return;
+      }
+      
       const currentWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(cityName)}&appid=${API_KEY}&units=metric`;
       const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(cityName)}&appid=${API_KEY}&units=metric`;
       
@@ -244,6 +271,11 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRef
       <View style={styles.header}>
         <Ionicons name="partly-sunny" size={24} color={colors.primary.main} />
         <Text style={styles.title}>Weather Forecast</Text>
+        {getWeatherApiKey() === 'demo' && (
+          <View style={styles.demoBadge}>
+            <Text style={styles.demoText}>DEMO</Text>
+          </View>
+        )}
         <TouchableOpacity onPress={fetchWeatherData} style={styles.refreshButton}>
           <Ionicons name="refresh" size={20} color={colors.primary.main} />
         </TouchableOpacity>
@@ -443,5 +475,18 @@ const styles = StyleSheet.create({
     fontSize: typography?.fontSize?.xs || 12,
       fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
+  },
+  demoBadge: {
+    backgroundColor: colors.accent.orange,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: 2,
+    borderRadius: borderRadius.sm,
+    marginLeft: spacing.sm,
+  },
+  demoText: {
+    fontSize: typography?.fontSize?.xs || 10,
+    fontFamily: typography?.fontFamily?.bold || 'System',
+    color: colors.white,
+    fontWeight: '700',
   },
 });
