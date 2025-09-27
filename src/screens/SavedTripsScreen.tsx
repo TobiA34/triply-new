@@ -715,7 +715,6 @@ export const SavedTripsScreen = ({ onNavigateToSetup, onNavigateToItinerary, onO
             <View style={styles.modalContent}>
               <WeatherWidget 
                 destination={weatherTrip?.destination || ''} 
-                onDismiss={handleCloseWeather}
               />
             </View>
           </View>

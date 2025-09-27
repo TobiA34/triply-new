@@ -33,7 +33,7 @@ export const CustomTabNavigator = () => {
   const renderScreen = () => {
     switch (activeTab) {
       case 'Create':
-        return <SetupScreen onNavigateToTrips={() => navigateToTab('Trips')} />;
+        return <SetupScreen />;
       case 'Trips':
         return (
           <SavedTripsScreen
@@ -47,7 +47,7 @@ export const CustomTabNavigator = () => {
       case 'Settings':
         return <SettingsScreen />;
       default:
-        return <SetupScreen onNavigateToTrips={() => navigateToTab('Trips')} />;
+        return <SetupScreen />;
     }
   };
 
@@ -63,7 +63,7 @@ export const CustomTabNavigator = () => {
         {renderScreen()}
       </View>
         <Modal visible={showActivities} animationType="slide" onRequestClose={() => setShowActivities(false)}>
-          <ActivityManagementScreen trip={activeTrip} onClose={() => setShowActivities(false)} />
+          {activeTrip && <ActivityManagementScreen trip={activeTrip} onClose={() => setShowActivities(false)} />}
         </Modal>
       <SafeAreaView edges={['bottom']} style={{ backgroundColor: colors.surface.primary }}>
       <View style={[
