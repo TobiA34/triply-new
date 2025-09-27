@@ -33,15 +33,14 @@ interface WeatherData {
 interface WeatherWidgetProps {
   destination: string;
   onRefresh?: () => void;
-  compact?: boolean;
 }
 
-export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRefresh, compact = false }) => {
+export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRefresh }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Real weather data from OpenWeatherMap API with demo fallback
+  // Real weather data from OpenWeatherMap API
   const fetchWeatherData = async () => {
     setLoading(true);
     setError(null);
@@ -50,35 +49,8 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRef
       // Extract city name from destination (remove country if present)
       const cityName = destination.split(',')[0].trim();
       
-      // Check if API key is set
+      // OpenWeatherMap API call
       const API_KEY = getWeatherApiKey();
-      
-      if (API_KEY === 'demo') {
-        // Demo mode - show mock data
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate loading
-        
-        const mockWeatherData: WeatherData = {
-          current: {
-            temperature: Math.floor(Math.random() * 15) + 15, // 15-30°C
-            condition: ['Sunny', 'Partly Cloudy', 'Cloudy', 'Rainy'][Math.floor(Math.random() * 4)],
-            humidity: Math.floor(Math.random() * 40) + 40, // 40-80%
-            windSpeed: Math.floor(Math.random() * 20) + 5, // 5-25 km/h
-            icon: 'sunny',
-          },
-          forecast: [
-            { date: '2024-01-15', day: 'Mon', high: 22, low: 16, condition: 'Sunny', icon: 'sunny', precipitation: 0 },
-            { date: '2024-01-16', day: 'Tue', high: 20, low: 14, condition: 'Partly Cloudy', icon: 'partly-sunny', precipitation: 10 },
-            { date: '2024-01-17', day: 'Wed', high: 18, low: 12, condition: 'Rainy', icon: 'rainy', precipitation: 80 },
-            { date: '2024-01-18', day: 'Thu', high: 19, low: 13, condition: 'Cloudy', icon: 'cloudy', precipitation: 20 },
-            { date: '2024-01-19', day: 'Fri', high: 21, low: 15, condition: 'Sunny', icon: 'sunny', precipitation: 5 },
-          ],
-        };
-        
-        setWeatherData(mockWeatherData);
-        return;
-      }
-      
-      // Real API call
       const currentWeatherUrl = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(cityName)}&appid=${API_KEY}&units=metric`;
       const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(cityName)}&appid=${API_KEY}&units=metric`;
       
@@ -267,43 +239,11 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRef
 
   if (!weatherData) return null;
 
-  // Compact mode for trip cards
-  if (compact) {
-    return (
-      <View style={styles.compactContainer}>
-        <View style={styles.compactHeader}>
-          <Ionicons name="partly-sunny" size={16} color={colors.primary.main} />
-          <Text style={styles.compactTitle}>Weather</Text>
-        </View>
-        <View style={styles.compactContent}>
-          <View style={styles.compactMain}>
-            <Text style={styles.compactTemperature}>{formatTemperature(weatherData.current.temperature)}</Text>
-            <Ionicons 
-              name={getWeatherIcon(weatherData.current.icon)} 
-              size={24} 
-              color={colors.primary.main} 
-            />
-          </View>
-          <Text style={styles.compactCondition}>{weatherData.current.condition}</Text>
-          <View style={styles.compactDetails}>
-            <Text style={styles.compactDetailText}>{weatherData.current.humidity}% humidity</Text>
-            <Text style={styles.compactDetailText}>{weatherData.current.windSpeed} km/h wind</Text>
-          </View>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Ionicons name="partly-sunny" size={24} color={colors.primary.main} />
         <Text style={styles.title}>Weather Forecast</Text>
-        {getWeatherApiKey() === 'demo' && (
-          <View style={styles.demoBadge}>
-            <Text style={styles.demoText}>DEMO</Text>
-          </View>
-        )}
         <TouchableOpacity onPress={fetchWeatherData} style={styles.refreshButton}>
           <Ionicons name="refresh" size={20} color={colors.primary.main} />
         </TouchableOpacity>
@@ -382,20 +322,6 @@ const styles = StyleSheet.create({
     padding: spacing.sm,
     borderRadius: borderRadius.md,
     backgroundColor: colors.surface.secondary,
-  },
-  demoBadge: {
-    backgroundColor: colors.accent.main,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.full,
-    marginRight: spacing.sm,
-  },
-  demoText: {
-    fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily.bold,
-    color: colors.accent.contrastText,
-    textTransform: 'uppercase',
-    letterSpacing: typography.letterSpacing.wide,
   },
   placeholder: {
     alignItems: 'center',
@@ -514,53 +440,6 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   precipitationText: {
-    fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily.regular,
-    color: colors.text.secondary,
-  },
-  // Compact mode styles
-  compactContainer: {
-    backgroundColor: colors.surface.secondary,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    marginTop: spacing.sm,
-  },
-  compactHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.sm,
-  },
-  compactTitle: {
-    fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.semibold,
-    color: colors.text.primary,
-    marginLeft: spacing.xs,
-  },
-  compactContent: {
-    alignItems: 'center',
-  },
-  compactMain: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  compactTemperature: {
-    fontSize: typography.fontSize.xl,
-    fontFamily: typography.fontFamily.bold,
-    color: colors.text.primary,
-    marginRight: spacing.sm,
-  },
-  compactCondition: {
-    fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.regular,
-    color: colors.text.secondary,
-    marginBottom: spacing.xs,
-  },
-  compactDetails: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  compactDetailText: {
     fontSize: typography.fontSize.xs,
     fontFamily: typography.fontFamily.regular,
     color: colors.text.secondary,
