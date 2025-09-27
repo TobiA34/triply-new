@@ -10,6 +10,7 @@ import {
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { colors, typography, spacing, borderRadius, shadows } from '../theme';
 import { databaseService, Trip, Activity } from '../services/database';
 import { CurrencyInput } from '../components/CurrencyInput';
 import { DatePicker } from '../components/DatePicker';
@@ -35,7 +36,12 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
-  const [defaultMode, setDefaultMode] = useState<'walk' | 'drive' | 'transit' | 'auto'>('walk');
+  const [defaultMode, setDefaultMode] = useState<'walk' | 'drive' | 'transit' | 'auto'>('auto');
+  
+  // Helper function to convert auto mode to actual travel mode
+  const getTravelMode = (mode: 'walk' | 'drive' | 'transit' | 'auto'): 'walk' | 'drive' | 'transit' => {
+    return mode === 'auto' ? 'walk' : mode;
+  };
   const [travelSettings, setTravelSettings] = useState<TravelSettings>({ walkingSpeedKmh: 4.5, defaultBufferMin: 5 });
   const [useTripSettings, setUseTripSettings] = useState(false);
   const [nudge, setNudge] = useState<{ text: string; severity: 'info' | 'warn' | 'alert' } | null>(null);
@@ -139,7 +145,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
         ) : estimateTravel(
           { name: cur.location || cur.name },
           { name: next.location || next.name },
-          (defaultMode === 'auto' ? 'walk' : defaultMode),
+          getTravelMode(defaultMode),
           travelSettings
         );
 
@@ -191,7 +197,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
           ) : estimateTravel(
             { name: cur.location || cur.name },
             { name: next.location || next.name },
-            (defaultMode === 'auto' ? 'walk' : defaultMode),
+            getTravelMode(defaultMode),
             travelSettings
           );
           const leave = computeLeaveBy(
@@ -466,21 +472,22 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
     <View style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.iconButton} onPress={onClose}>
-            <Text style={styles.iconText}>←</Text>
+          <TouchableOpacity style={styles.backButton} onPress={onClose}>
+            <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
           <View style={styles.headerCenter}>
-            <Text style={styles.title} numberOfLines={1}>Activities for {trip.destination}</Text>
+            <Text style={styles.title} numberOfLines={1}>Activities</Text>
+            <Text style={styles.subtitle} numberOfLines={1}>{trip.destination}</Text>
           </View>
           <View style={styles.headerActions}>
-            <TouchableOpacity style={styles.iconButton} onPress={() => setIsPollVisible(true)}>
-              <Text style={styles.iconText}>🗳️</Text>
+            <TouchableOpacity style={styles.actionButton} onPress={() => setIsPollVisible(true)}>
+              <Text style={styles.actionButtonText}>🗳️</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton} onPress={scheduleAllNotifications}>
-              <Text style={styles.iconText}>🔔</Text>
+            <TouchableOpacity style={styles.actionButton} onPress={scheduleAllNotifications}>
+              <Text style={styles.actionButtonText}>🔔</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.iconButton} onPress={() => setIsSettingsVisible(true)}>
-              <Text style={styles.iconText}>⚙︎</Text>
+            <TouchableOpacity style={styles.actionButton} onPress={() => setIsSettingsVisible(true)}>
+              <Text style={styles.actionButtonText}>⚙︎</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.addButton} onPress={handleAddActivity}>
               <Text style={styles.addButtonText}>+ Add</Text>
@@ -510,7 +517,9 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
         })()}
         {Object.keys(groupedActivities).length === 0 ? (
           <View style={styles.emptyContainer}>
-            <Text style={styles.emptyIcon}>🎯</Text>
+            <View style={styles.emptyIconContainer}>
+              <Text style={styles.emptyIcon}>🎯</Text>
+            </View>
             <Text style={styles.emptyTitle}>No activities yet</Text>
             <Text style={styles.emptySubtitle}>Tap the + Add button to create your first activity</Text>
           </View>
@@ -548,7 +557,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
                   } | null = null;
 
                   if (next && next.time) {
-                    const mode: TravelMode = defaultMode === 'auto' ? pickAutoMode(0) : (defaultMode as TravelMode);
+                    const mode: TravelMode = getTravelMode(defaultMode);
                     const est = (defaultMode === 'auto') ? estimateWithAutoMode(
                       { name: activity.location || activity.name },
                       { name: next.location || next.name },
@@ -564,7 +573,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
                       toTodayISO(next.time),
                       { name: activity.location || activity.name },
                       { name: next.location || next.name },
-                      (defaultMode === 'auto') ? est.mode : mode,
+                      getTravelMode(defaultMode),
                       undefined,
                       travelSettings
                     );
@@ -578,7 +587,12 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
                   return (
                   <View key={activity.id} style={styles.activityCard}>
                     <View style={styles.activityHeader}>
-                      <Text style={styles.activityName}>{activity.name}</Text>
+                      <View style={styles.activityTitleContainer}>
+                        <Text style={styles.activityName}>{activity.name}</Text>
+                        <View style={styles.activityTypeBadge}>
+                          <Text style={styles.activityTypeText}>{activity.type}</Text>
+                        </View>
+                      </View>
                       <View style={styles.activityActions}>
                         <TouchableOpacity
                           style={styles.editButton}
@@ -594,27 +608,50 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
                         </TouchableOpacity>
                       </View>
                     </View>
-                    <Text style={styles.activityType}>{activity.type}</Text>
-                    <Text style={styles.activityDescription}>{activity.description}</Text>
+                    
+                    {activity.description && (
+                      <Text style={styles.activityDescription}>{activity.description}</Text>
+                    )}
+                    
                     <View style={styles.activityDetails}>
-                      <Text style={styles.activityDetail}>📍 {activity.location}</Text>
-                      <Text style={styles.activityDetail}>⏱️ {activity.duration}</Text>
-                      <Text style={styles.activityDetail}>💰 {currencySymbol}{activity.cost}</Text>
-                      <Text style={styles.activityDetail}>🕐 {formatTime(activity.time)}</Text>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailIcon}>📍</Text>
+                        <Text style={styles.activityDetail}>{activity.location}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailIcon}>⏱️</Text>
+                        <Text style={styles.activityDetail}>{activity.duration}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailIcon}>💰</Text>
+                        <Text style={styles.activityDetail}>{currencySymbol}{activity.cost}</Text>
+                      </View>
+                      <View style={styles.detailRow}>
+                        <Text style={styles.detailIcon}>🕐</Text>
+                        <Text style={styles.activityDetail}>{formatTime(activity.time)}</Text>
+                      </View>
                       {(activity as any).bookingStatus && (
-                        <Text style={styles.activityDetail}>📑 {(activity as any).bookingStatus}</Text>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailIcon}>📑</Text>
+                          <Text style={styles.activityDetail}>{(activity as any).bookingStatus}</Text>
+                        </View>
                       )}
                       {(activity as any).receiptUri && (
-                        <Text style={styles.activityDetail}>🧾 Receipt</Text>
+                        <View style={styles.detailRow}>
+                          <Text style={styles.detailIcon}>🧾</Text>
+                          <Text style={styles.activityDetail}>Receipt attached</Text>
+                        </View>
                       )}
                     </View>
+                    
                     {leaveByInfo && (
-                      <View style={styles.nudgeRow}>
-                        <Text style={
-                          leaveByInfo.status === 'on_time' ? styles.nudgeOnTime :
-                          leaveByInfo.status === 'at_risk' ? styles.nudgeAtRisk :
-                          styles.nudgeLate
-                        }>
+                      <View style={[
+                        styles.nudgeRow, 
+                        leaveByInfo.status === 'on_time' ? styles.nudgeOntime :
+                        leaveByInfo.status === 'at_risk' ? styles.nudgeAtrisk :
+                        styles.nudgeLate
+                      ]}>
+                        <Text style={styles.nudgeText}>
                           {leaveByInfo.text}
                         </Text>
                       </View>
@@ -681,7 +718,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
                 value={formData.description}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
                 placeholder="Enter activity description"
-                multiline
+                multiline={true}
                 numberOfLines={3}
               />
             </View>
@@ -852,7 +889,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
                 value={formData.description}
                 onChangeText={(text) => setFormData(prev => ({ ...prev, description: text }))}
                 placeholder="Enter activity description"
-                multiline
+                multiline={true}
                 numberOfLines={3}
               />
             </View>
@@ -920,9 +957,9 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={async () => { 
               if (useTripSettings) {
-                await saveTravelSettingsForTrip(trip.id, { mode: (defaultMode === 'auto' ? 'walk' : defaultMode) as TravelMode, settings: travelSettings });
+                await saveTravelSettingsForTrip(trip.id, { mode: getTravelMode(defaultMode), settings: travelSettings });
               } else {
-                await saveTravelSettings({ mode: (defaultMode === 'auto' ? 'walk' : defaultMode) as TravelMode, settings: travelSettings });
+                await saveTravelSettings({ mode: getTravelMode(defaultMode), settings: travelSettings });
               }
               setIsSettingsVisible(false);
             }}>
@@ -1127,188 +1164,277 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.background.paper,
   },
   safeArea: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.surface.primary,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: colors.border.light,
+    ...shadows.sm,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    paddingBottom: 12,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    paddingBottom: spacing.md,
   },
-  iconButton: { paddingHorizontal: 8, paddingVertical: 6 },
-  iconText: { fontSize: 18, color: '#6B7280' },
-  headerCenter: { flex: 1, paddingHorizontal: 8 },
+  backButton: { 
+    paddingHorizontal: spacing.sm, 
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  backButtonText: { 
+    fontSize: typography?.fontSize?.xl || 20, 
+    color: colors.text.primary,
+      fontFamily: typography?.fontFamily?.bold || 'System',
+  },
+  headerCenter: { 
+    flex: 1, 
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+  },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    textAlign: 'left',
+    fontSize: typography?.fontSize?.lg || 18,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
+    color: colors.text.primary,
+    lineHeight: typography?.lineHeight?.lg || 28,
   },
-  headerActions: { flexDirection: 'row', alignItems: 'center' },
+  subtitle: {
+    fontSize: typography?.fontSize?.sm || 14,
+      fontFamily: typography?.fontFamily?.regular || 'System',
+    color: colors.text.secondary,
+    lineHeight: typography?.lineHeight?.sm || 20,
+    marginTop: spacing.xs,
+  },
+  headerActions: { 
+    flexDirection: 'row', 
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  actionButton: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+  },
+  actionButtonText: {
+    fontSize: typography?.fontSize?.lg || 18,
+    color: colors.text.secondary,
+  },
   addButton: {
-    backgroundColor: '#4285F4',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
-    marginLeft: 8,
+    backgroundColor: colors.primary.main,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.lg,
+    ...shadows.sm,
   },
   addButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '600',
+    color: colors.primary.contrastText,
+    fontSize: typography?.fontSize?.sm || 14,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
+    lineHeight: typography?.lineHeight?.sm || 20,
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
+    padding: spacing.lg,
   },
   banner: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 12,
+    padding: spacing.md,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
   },
   bannerText: {
-    color: '#111827',
-    fontSize: 14,
-    fontWeight: '600',
+    color: colors.text.primary,
+    fontSize: typography?.fontSize?.sm || 14,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
+    lineHeight: typography?.lineHeight?.sm || 20,
   },
   bannerInfo: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: colors.status.info + '20',
+    borderLeftWidth: 4,
+    borderLeftColor: colors.status.info,
   },
   bannerWarn: {
-    backgroundColor: '#FEF3C7',
+    backgroundColor: colors.status.warning + '20',
+    borderLeftWidth: 4,
+    borderLeftColor: colors.status.warning,
   },
   bannerAlert: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: colors.status.error + '20',
+    borderLeftWidth: 4,
+    borderLeftColor: colors.status.error,
   },
   emptyContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 100,
-    paddingTop: 120,
+    paddingVertical: spacing['6xl'],
+    paddingTop: spacing['6xl'],
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surface.secondary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.lg,
   },
   emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
+    fontSize: 40,
   },
   emptyTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 8,
+    fontSize: typography?.fontSize?.xl || 20,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
+    color: colors.text.primary,
+    marginBottom: spacing.sm,
+    lineHeight: typography?.lineHeight?.xl || 28,
   },
   emptySubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
+    fontSize: typography?.fontSize?.base || 16,
+      fontFamily: typography?.fontFamily?.regular || 'System',
+    color: colors.text.secondary,
     textAlign: 'center',
+    lineHeight: typography?.lineHeight?.base || 24,
+    maxWidth: 280,
   },
   daySection: {
-    marginBottom: 24,
+    marginBottom: spacing['3xl'],
   },
   dayTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#111827',
-    marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    fontSize: typography?.fontSize?.lg || 18,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
+    color: colors.text.primary,
+    marginBottom: spacing.md,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 2,
+    borderBottomColor: colors.primary.main,
+    lineHeight: typography?.lineHeight?.lg || 28,
   },
   activityCard: {
-    backgroundColor: '#FFFFFF',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: colors.surface.primary,
+    padding: spacing.lg,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
+    ...shadows.md,
   },
   activityHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
+  },
+  activityTitleContainer: {
+    flex: 1,
+    marginRight: spacing.md,
   },
   activityName: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#111827',
-    flex: 1,
+    fontSize: typography?.fontSize?.base || 16,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
+    color: colors.text.primary,
+    lineHeight: typography?.lineHeight?.base || 24,
+    marginBottom: spacing.xs,
+  },
+  activityTypeBadge: {
+    backgroundColor: colors.primary.main + '20',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.full,
+    alignSelf: 'flex-start',
+  },
+  activityTypeText: {
+    fontSize: typography?.fontSize?.xs || 12,
+      fontFamily: typography?.fontFamily?.medium || 'System',
+    color: colors.primary.main,
+    textTransform: 'uppercase',
+    letterSpacing: typography?.letterSpacing?.wide || 0.5,
   },
   activityActions: {
     flexDirection: 'row',
-    gap: 8,
+    gap: spacing.sm,
   },
   editButton: {
-    backgroundColor: '#F3F4F6',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    backgroundColor: colors.surface.secondary,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.md,
   },
   editButtonText: {
-    fontSize: 12,
-    color: '#4285F4',
-    fontWeight: '500',
+    fontSize: typography?.fontSize?.xs || 12,
+      fontFamily: typography?.fontFamily?.medium || 'System',
+    color: colors.primary.main,
+    lineHeight: typography?.lineHeight?.xs || 16,
   },
   deleteButton: {
-    backgroundColor: '#FEF2F2',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+    backgroundColor: colors.status.error + '20',
+    paddingHorizontal: spacing.sm,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.md,
   },
   deleteButtonText: {
-    fontSize: 12,
-    color: '#DC2626',
-    fontWeight: '500',
-  },
-  activityType: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    fontSize: typography?.fontSize?.xs || 12,
+      fontFamily: typography?.fontFamily?.medium || 'System',
+    color: colors.status.error,
+    lineHeight: typography?.lineHeight?.xs || 16,
   },
   activityDescription: {
-    fontSize: 14,
-    color: '#374151',
-    marginBottom: 12,
-    lineHeight: 20,
+    fontSize: typography?.fontSize?.sm || 14,
+      fontFamily: typography?.fontFamily?.regular || 'System',
+    color: colors.text.secondary,
+    marginBottom: spacing.md,
+    lineHeight: typography?.lineHeight?.sm || 20,
   },
   activityDetails: {
+    gap: spacing.xs,
+  },
+  detailRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  detailIcon: {
+    fontSize: typography?.fontSize?.sm || 14,
+    width: 20,
   },
   activityDetail: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginBottom: 4,
+    fontSize: typography?.fontSize?.sm || 14,
+      fontFamily: typography?.fontFamily?.regular || 'System',
+    color: colors.text.secondary,
+    lineHeight: typography?.lineHeight?.sm || 20,
+    flex: 1,
   },
   nudgeRow: {
-    marginTop: 6,
+    marginTop: spacing.sm,
+    padding: spacing.sm,
+    borderRadius: borderRadius.md,
   },
-  nudgeOnTime: {
-    color: '#059669',
-    fontSize: 12,
+  nudgeOntime: {
+    backgroundColor: colors.status.success + '20',
   },
-  nudgeAtRisk: {
-    color: '#D97706',
-    fontSize: 12,
+  nudgeAtrisk: {
+    backgroundColor: colors.status.warning + '20',
   },
   nudgeLate: {
-    color: '#DC2626',
-    fontSize: 12,
-    fontWeight: '600',
+    backgroundColor: colors.status.error + '20',
+  },
+  nudgeText: {
+    fontSize: typography?.fontSize?.xs || 12,
+      fontFamily: typography?.fontFamily?.medium || 'System',
+    lineHeight: typography?.lineHeight?.xs || 16,
+  },
+  daySpend: {
+    fontSize: typography?.fontSize?.sm || 14,
+      fontFamily: typography?.fontFamily?.medium || 'System',
+    color: colors.text.secondary,
+    marginBottom: spacing.sm,
+  },
+  overCap: {
+    color: colors.status.error,
+  },
+  underCap: {
+    color: colors.status.success,
   },
   modalContainer: {
     flex: 1,

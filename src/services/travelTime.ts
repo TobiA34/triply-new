@@ -2,7 +2,7 @@
 // Uses haversine distance when coordinates are available, otherwise
 // derives a stable pseudo-distance from location names.
 
-export type TravelMode = 'walk' | 'drive' | 'transit';
+export type TravelMode = 'walk' | 'drive' | 'transit' | 'auto';
 
 export interface LocationLike {
   name: string;
@@ -88,9 +88,18 @@ export const estimateTravel = (
   } else if (mode === 'drive') {
     // Average city speed ~ 28km/h + 4 min lights/parking overhead
     durationMin = (distanceKm / 28) * 60 + 4;
-  } else {
+  } else if (mode === 'transit') {
     // Transit: ~ 22km/h + 6 min average wait/transfer
     durationMin = (distanceKm / 22) * 60 + 6;
+  } else if (mode === 'auto') {
+    // Auto mode: choose the fastest option
+    const walkTime = (distanceKm / cfg.walkingSpeedKmh) * 60;
+    const driveTime = (distanceKm / 28) * 60 + 4;
+    const transitTime = (distanceKm / 22) * 60 + 6;
+    durationMin = Math.min(walkTime, driveTime, transitTime);
+  } else {
+    // Default to walking
+    durationMin = (distanceKm / cfg.walkingSpeedKmh) * 60;
   }
 
   // Clamp sensible bounds

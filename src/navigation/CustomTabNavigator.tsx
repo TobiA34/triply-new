@@ -1,57 +1,96 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useState, useMemo } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, Modal } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context';
+import { useTheme } from '../contexts/ThemeContext';
+import { useThemeColors } from '../hooks/useThemeColors';
+import { useLocalization } from '../contexts/LocalizationContext';
 import { SetupScreen } from '../screens/SetupScreen';
 import { SavedTripsScreen } from '../screens/SavedTripsScreen';
-import { ItineraryScreen } from '../screens/ItineraryScreen';
+import { SettingsScreen } from '../screens/SettingsScreen';
+import { ActivityManagementScreen } from '../screens/ActivityManagementScreen';
+import { Trip } from '../services/database';
 
-type TabName = 'Create' | 'Trips' | 'AI';
+type TabName = 'Create' | 'Trips' | 'Settings';
 
 export const CustomTabNavigator = () => {
-  const [activeTab, setActiveTab] = useState<TabName>('Create');
+  const { isDark } = useTheme();
+  const colors = useThemeColors();
+  const { t } = useLocalization();
+  const insets = useSafeAreaInsets();
+  
+  // Colors are now guaranteed to be properly structured by useThemeColors hook
+  
+  const styles = createStyles(colors);
+  const [activeTab, setActiveTab] = useState<TabName>('Trips');
+  const [activeTrip, setActiveTrip] = useState<Trip | undefined>(undefined);
+  const [showActivities, setShowActivities] = useState(false);
+
+  const navigateToTab = (tabName: TabName) => {
+    setActiveTab(tabName);
+  };
 
   const renderScreen = () => {
     switch (activeTab) {
       case 'Create':
         return <SetupScreen />;
       case 'Trips':
-        return <SavedTripsScreen />;
-      case 'AI':
-        return <ItineraryScreen />;
+        return (
+          <SavedTripsScreen
+            onNavigateToSetup={() => navigateToTab('Create')}
+            onOpenActivities={(trip) => {
+              setActiveTrip(trip);
+              setShowActivities(true);
+            }}
+          />
+        );
+      case 'Settings':
+        return <SettingsScreen />;
       default:
         return <SetupScreen />;
     }
   };
 
-  const tabs = [
-    { name: 'Create' as TabName, icon: 'add-circle-outline', activeIcon: 'add-circle', label: 'Create' },
-    { name: 'Trips' as TabName, icon: 'map-outline', activeIcon: 'map', label: 'Trips' },
-    { name: 'AI' as TabName, icon: 'chatbubble-outline', activeIcon: 'chatbubble', label: 'AI' },
-  ];
+  const tabs = useMemo(() => [
+    { name: 'Create' as TabName, icon: 'add-circle-outline', activeIcon: 'add-circle', label: t('nav.setup') },
+    { name: 'Trips' as TabName, icon: 'map-outline', activeIcon: 'map', label: t('nav.trips') },
+    { name: 'Settings' as TabName, icon: 'settings-outline', activeIcon: 'settings', label: t('nav.settings') },
+  ], [t]);
 
   return (
-    <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: colors.background.default }]}>
       <View style={styles.screenContainer}>
         {renderScreen()}
       </View>
-      <View style={styles.tabBar}>
+        <Modal visible={showActivities} animationType="slide" onRequestClose={() => setShowActivities(false)}>
+          {activeTrip && <ActivityManagementScreen trip={activeTrip} onClose={() => setShowActivities(false)} />}
+        </Modal>
+      <SafeAreaView edges={['bottom']} style={{ backgroundColor: colors.surface.primary }}>
+      <View style={[
+        styles.tabBar,
+        { 
+          backgroundColor: colors.surface.primary, 
+          borderTopColor: colors.border.light,
+        }
+      ]}> 
         {tabs.map((tab) => (
           <TouchableOpacity
             key={tab.name}
             style={[
               styles.tab,
-              activeTab === tab.name && styles.activeTab
+              activeTab === tab.name && [styles.activeTab, { backgroundColor: colors.surface.secondary }]
             ]}
             onPress={() => setActiveTab(tab.name)}
           >
             <Ionicons
               name={activeTab === tab.name ? tab.activeIcon as any : tab.icon as any}
               size={24}
-              color={activeTab === tab.name ? '#4285F4' : '#6B7280'}
+              color={activeTab === tab.name ? colors.primary.main : colors.text.secondary}
               style={styles.tabIcon}
             />
             <Text style={[
               styles.tabLabel,
+              { color: activeTab === tab.name ? colors.primary.main : colors.text.secondary },
               activeTab === tab.name && styles.activeTabLabel
             ]}>
               {tab.label}
@@ -59,35 +98,33 @@ export const CustomTabNavigator = () => {
           </TouchableOpacity>
         ))}
       </View>
+      </SafeAreaView>
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8F9FA',
   },
   screenContainer: {
     flex: 1,
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
     borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-    paddingBottom: 8,
+    paddingBottom: 16,
     paddingTop: 8,
-    height: 60,
+    minHeight: 70,
   },
   tab: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 8,
+    paddingHorizontal: 4,
   },
   activeTab: {
-    backgroundColor: '#F0F7FF',
     borderRadius: 8,
     marginHorizontal: 4,
   },
@@ -95,12 +132,12 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
-    color: '#6B7280',
+    textAlign: 'center',
+    marginTop: 2,
   },
   activeTabLabel: {
-    color: '#4285F4',
     fontWeight: '600',
   },
 });

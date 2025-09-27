@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { colors, typography } from '../theme';
+import { typography } from '../theme';
+import { useThemeColors } from '../hooks/useThemeColors';
 
 interface ItemCardProps {
   title: string;
@@ -9,6 +10,9 @@ interface ItemCardProps {
 }
 
 export const ItemCard: React.FC<ItemCardProps> = ({ title, description, onPress }) => {
+  const colors = useThemeColors();
+  const styles = createStyles(colors);
+  
   return (
     <TouchableOpacity
       style={styles.container}
@@ -23,7 +27,7 @@ export const ItemCard: React.FC<ItemCardProps> = ({ title, description, onPress 
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (colors: any) => StyleSheet.create({
   container: {
     backgroundColor: colors.background.paper,
     borderRadius: 12,
@@ -34,14 +38,14 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   title: {
-    fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.medium,
+    fontSize: typography?.fontSize?.lg || 18,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.primary,
     marginBottom: 4,
   },
   description: {
-    fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.regular,
+    fontSize: typography?.fontSize?.base || 16,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
   },
 });
