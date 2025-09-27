@@ -37,6 +37,11 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [isSettingsVisible, setIsSettingsVisible] = useState(false);
   const [defaultMode, setDefaultMode] = useState<'walk' | 'drive' | 'transit' | 'auto'>('auto');
+  
+  // Helper function to convert auto mode to actual travel mode
+  const getTravelMode = (mode: 'walk' | 'drive' | 'transit' | 'auto'): 'walk' | 'drive' | 'transit' => {
+    return mode === 'auto' ? 'walk' : mode;
+  };
   const [travelSettings, setTravelSettings] = useState<TravelSettings>({ walkingSpeedKmh: 4.5, defaultBufferMin: 5 });
   const [useTripSettings, setUseTripSettings] = useState(false);
   const [nudge, setNudge] = useState<{ text: string; severity: 'info' | 'warn' | 'alert' } | null>(null);
@@ -140,7 +145,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
         ) : estimateTravel(
           { name: cur.location || cur.name },
           { name: next.location || next.name },
-          (defaultMode === 'auto' ? 'walk' : defaultMode),
+          getTravelMode(defaultMode),
           travelSettings
         );
 
@@ -192,7 +197,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
           ) : estimateTravel(
             { name: cur.location || cur.name },
             { name: next.location || next.name },
-            (defaultMode === 'auto' ? 'walk' : defaultMode as 'walk' | 'drive' | 'transit'),
+            getTravelMode(defaultMode),
             travelSettings
           );
           const leave = computeLeaveBy(
@@ -552,7 +557,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
                   } | null = null;
 
                   if (next && next.time) {
-                    const mode: TravelMode = defaultMode === 'auto' ? pickAutoMode(0) : (defaultMode as TravelMode);
+                    const mode: TravelMode = getTravelMode(defaultMode);
                     const est = (defaultMode === 'auto') ? estimateWithAutoMode(
                       { name: activity.location || activity.name },
                       { name: next.location || next.name },
@@ -568,7 +573,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
                       toTodayISO(next.time),
                       { name: activity.location || activity.name },
                       { name: next.location || next.name },
-                      (defaultMode === 'auto') ? est.mode : mode,
+                      getTravelMode(defaultMode),
                       undefined,
                       travelSettings
                     );
@@ -952,9 +957,9 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
           <View style={styles.modalHeader}>
             <TouchableOpacity onPress={async () => { 
               if (useTripSettings) {
-                await saveTravelSettingsForTrip(trip.id, { mode: (defaultMode === 'auto' ? 'walk' : defaultMode) as TravelMode, settings: travelSettings });
+                await saveTravelSettingsForTrip(trip.id, { mode: getTravelMode(defaultMode), settings: travelSettings });
               } else {
-                await saveTravelSettings({ mode: (defaultMode === 'auto' ? 'walk' : defaultMode) as TravelMode, settings: travelSettings });
+                await saveTravelSettings({ mode: getTravelMode(defaultMode), settings: travelSettings });
               }
               setIsSettingsVisible(false);
             }}>
