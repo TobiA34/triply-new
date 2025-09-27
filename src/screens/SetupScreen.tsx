@@ -29,7 +29,7 @@ interface FormErrors {
 }
 
 export const SetupScreen = () => {
-  const { formatAmount, getCurrencySymbol } = useCurrency();
+  const { formatAmount, getCurrencySymbol, currency } = useCurrency();
   const [destination, setDestination] = useState('');
   const [selectedLocation, setSelectedLocation] = useState<Location | null>(null);
   const [checkIn, setCheckIn] = useState('');
@@ -336,14 +336,14 @@ export const SetupScreen = () => {
             max={1000}
             step={10}
             label="Total Budget"
-            unit={getCurrencySymbol()}
+            unit={getCurrencySymbol(currency)}
             description="Your overall trip budget"
             onBlur={() => handleFieldBlur('budget')}
             error={touched.budget ? errors.budget : undefined}
           />
           
           <FormInput
-            placeholder={`Daily limit (e.g. 150 ${getCurrencySymbol()})`}
+            placeholder={`Daily limit (e.g. 150 ${getCurrencySymbol(currency)})`}
             keyboardType="numeric"
             value={dailySpendCap == null ? '' : String(dailySpendCap)}
             onChangeText={(text) => {

@@ -192,7 +192,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
           ) : estimateTravel(
             { name: cur.location || cur.name },
             { name: next.location || next.name },
-            (defaultMode === 'auto' ? 'walk' : defaultMode),
+            (defaultMode === 'auto' ? 'walk' : defaultMode as 'walk' | 'drive' | 'transit'),
             travelSettings
           );
           const leave = computeLeaveBy(
