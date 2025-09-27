@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginLeft: spacing.sm,
     flex: 1,
@@ -329,7 +329,7 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     textAlign: 'center',
   },
@@ -339,7 +339,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     marginTop: spacing.md,
   },
@@ -349,7 +349,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.status.error,
     textAlign: 'center',
     marginTop: spacing.sm,
@@ -363,7 +363,7 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.primary.contrastText,
   },
   currentWeather: {
@@ -380,13 +380,13 @@ const styles = StyleSheet.create({
   },
   temperature: {
     fontSize: typography.fontSize['4xl'],
-    fontFamily: typography.fontFamily.bold,
+      fontFamily: typography?.fontFamily?.bold || 'System',
     color: colors.text.primary,
     lineHeight: typography.lineHeight['4xl'],
   },
   condition: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     marginTop: spacing.xs,
   },
@@ -401,7 +401,7 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.secondary,
   },
   forecastContainer: {
@@ -418,19 +418,19 @@ const styles = StyleSheet.create({
   },
   forecastDayName: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginBottom: spacing.xs,
   },
   forecastHigh: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginTop: spacing.xs,
   },
   forecastLow: {
     fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
   },
   precipitationContainer: {
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
   },
   precipitationText: {
     fontSize: typography.fontSize.xs,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
   },
 });

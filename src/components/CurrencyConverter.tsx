@@ -340,7 +340,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginLeft: spacing.sm,
     flex: 1,
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   placeholderText: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     textAlign: 'center',
   },
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     marginLeft: spacing.sm,
   },
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.status.error,
     marginLeft: spacing.sm,
     flex: 1,
@@ -399,7 +399,7 @@ const styles = StyleSheet.create({
   },
   currencyLabel: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.primary,
     flex: 1,
   },
@@ -418,7 +418,7 @@ const styles = StyleSheet.create({
   },
   currencyCode: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     flex: 1,
   },
@@ -434,7 +434,7 @@ const styles = StyleSheet.create({
   },
   amountLabel: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.primary,
     marginBottom: spacing.sm,
   },
@@ -447,14 +447,14 @@ const styles = StyleSheet.create({
   },
   currencySymbol: {
     fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
     marginRight: spacing.sm,
   },
   amountInput: {
     flex: 1,
     fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.primary,
     paddingVertical: spacing.md,
   },
@@ -466,19 +466,19 @@ const styles = StyleSheet.create({
   },
   resultLabel: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.medium,
+      fontFamily: typography?.fontFamily?.medium || 'System',
     color: colors.text.secondary,
     marginBottom: spacing.xs,
   },
   resultAmount: {
     fontSize: typography.fontSize['3xl'],
-    fontFamily: typography.fontFamily.bold,
+      fontFamily: typography?.fontFamily?.bold || 'System',
     color: colors.primary.main,
     marginBottom: spacing.sm,
   },
   exchangeRate: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
   },
   pickerOverlay: {
@@ -510,7 +510,7 @@ const styles = StyleSheet.create({
   },
   pickerTitle: {
     fontSize: typography.fontSize.lg,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
   },
   currencyList: {
@@ -535,12 +535,12 @@ const styles = StyleSheet.create({
   },
   currencyItemCode: {
     fontSize: typography.fontSize.base,
-    fontFamily: typography.fontFamily.semibold,
+      fontFamily: typography?.fontFamily?.semibold || 'System',
     color: colors.text.primary,
   },
   currencyItemName: {
     fontSize: typography.fontSize.sm,
-    fontFamily: typography.fontFamily.regular,
+      fontFamily: typography?.fontFamily?.regular || 'System',
     color: colors.text.secondary,
     marginTop: spacing.xs,
   },

@@ -1,27 +1,28 @@
 import { Platform } from 'react-native';
 
-export const typography = {
+// Ensure typography is always defined with fallbacks
+const createTypography = () => ({
   fontFamily: {
     regular: Platform.select({
       ios: 'System',
       android: 'Roboto',
       default: 'System',
-    }),
+    }) || 'System',
     medium: Platform.select({
       ios: 'System',
       android: 'Roboto-Medium',
       default: 'System',
-    }),
+    }) || 'System',
     semibold: Platform.select({
       ios: 'System',
       android: 'Roboto-Medium',
       default: 'System',
-    }),
+    }) || 'System',
     bold: Platform.select({
       ios: 'System',
       android: 'Roboto-Bold',
       default: 'System',
-    }),
+    }) || 'System',
   },
   fontSize: {
     xs: 12,
@@ -51,4 +52,7 @@ export const typography = {
     wide: 0.5,
     wider: 1,
   },
-} as const;
+});
+
+// Export the typography object with safety checks
+export const typography = createTypography();
