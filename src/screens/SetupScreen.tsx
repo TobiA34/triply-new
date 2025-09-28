@@ -42,6 +42,7 @@ export const SetupScreen = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [touched, setTouched] = useState<{ [key: string]: boolean }>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [showWeatherWidget, setShowWeatherWidget] = useState(true);
 
   useEffect(() => { (async () => { try { await databaseService.init(); } catch {} })(); }, []);
 
@@ -287,7 +288,12 @@ export const SetupScreen = () => {
         </Section>
 
         {/* Weather Widget */}
-        <WeatherWidget destination={destination} />
+        {showWeatherWidget && (
+          <WeatherWidget 
+            destination={destination} 
+            onDismiss={() => setShowWeatherWidget(false)}
+          />
+        )}
 
         {/* Currency Converter */}
         <CurrencyConverter destination={destination} />
