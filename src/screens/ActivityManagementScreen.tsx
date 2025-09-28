@@ -469,8 +469,8 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
   }, [groupedActivities, initialDay]);
 
   return (
-    <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={styles.container}>
+      <View style={styles.safeArea}>
         <View style={styles.header}>
           <TouchableOpacity style={styles.backButton} onPress={onClose}>
             <Text style={styles.backButtonText}>←</Text>
@@ -494,7 +494,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
             </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
+      </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {nudge && (
@@ -1157,7 +1157,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
           </View>
         </View>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 
