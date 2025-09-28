@@ -459,7 +459,10 @@ export const EnhancedSavedTripsScreen = () => {
                 <Ionicons name="close" size={24} color={colors.text.primary} />
               </TouchableOpacity>
             </View>
-            <WeatherWidget destination={weatherTrip.destination} />
+            <WeatherWidget 
+              destination={weatherTrip.destination} 
+              onDismiss={() => setWeatherTrip(null)}
+            />
           </View>
         </Modal>
       )}

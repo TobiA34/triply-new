@@ -33,9 +33,10 @@ interface WeatherData {
 interface WeatherWidgetProps {
   destination: string;
   onRefresh?: () => void;
+  onDismiss?: () => void;
 }
 
-export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRefresh }) => {
+export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRefresh, onDismiss }) => {
   const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -276,9 +277,16 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRef
             <Text style={styles.demoText}>DEMO</Text>
           </View>
         )}
-        <TouchableOpacity onPress={fetchWeatherData} style={styles.refreshButton}>
-          <Ionicons name="refresh" size={20} color={colors.primary.main} />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity onPress={fetchWeatherData} style={styles.refreshButton}>
+            <Ionicons name="refresh" size={20} color={colors.primary.main} />
+          </TouchableOpacity>
+          {onDismiss && (
+            <TouchableOpacity onPress={onDismiss} style={styles.dismissButton}>
+              <Ionicons name="close" size={20} color={colors.text.secondary} />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
 
       {/* Current Weather */}
@@ -488,5 +496,15 @@ const styles = StyleSheet.create({
     fontFamily: typography?.fontFamily?.bold || 'System',
     color: colors.white,
     fontWeight: '700',
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  dismissButton: {
+    padding: spacing.xs,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.surface.secondary,
   },
 });
