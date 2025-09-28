@@ -6,6 +6,7 @@ import {
   ScrollView,
   ActivityIndicator,
   TouchableOpacity,
+  SafeAreaView,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, typography, spacing, borderRadius, shadows } from '../theme';
@@ -214,61 +215,68 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRef
 
   if (!destination) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Ionicons name="partly-sunny" size={24} color={colors.text.secondary} />
-          <Text style={styles.title}>Weather Forecast</Text>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Ionicons name="partly-sunny" size={24} color={colors.text.secondary} />
+            <Text style={styles.title}>Weather Forecast</Text>
+          </View>
+          <View style={styles.placeholder}>
+            <Text style={styles.placeholderText}>Select a destination to see weather</Text>
+          </View>
         </View>
-        <View style={styles.placeholder}>
-          <Text style={styles.placeholderText}>Select a destination to see weather</Text>
-        </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Ionicons name="partly-sunny" size={24} color={colors.primary.main} />
-          <Text style={styles.title}>Weather Forecast</Text>
-          <TouchableOpacity onPress={fetchWeatherData} style={styles.refreshButton}>
-            <Ionicons name="refresh" size={20} color={colors.primary.main} />
-          </TouchableOpacity>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Ionicons name="partly-sunny" size={24} color={colors.primary.main} />
+            <Text style={styles.title}>Weather Forecast</Text>
+            <TouchableOpacity onPress={fetchWeatherData} style={styles.refreshButton}>
+              <Ionicons name="refresh" size={20} color={colors.primary.main} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary.main} />
+            <Text style={styles.loadingText}>Loading weather data...</Text>
+          </View>
         </View>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary.main} />
-          <Text style={styles.loadingText}>Loading weather data...</Text>
-        </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (error) {
     return (
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Ionicons name="partly-sunny" size={24} color={colors.status.error} />
-          <Text style={styles.title}>Weather Forecast</Text>
-          <TouchableOpacity onPress={fetchWeatherData} style={styles.refreshButton}>
-            <Ionicons name="refresh" size={20} color={colors.primary.main} />
-          </TouchableOpacity>
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Ionicons name="partly-sunny" size={24} color={colors.status.error} />
+            <Text style={styles.title}>Weather Forecast</Text>
+            <TouchableOpacity onPress={fetchWeatherData} style={styles.refreshButton}>
+              <Ionicons name="refresh" size={20} color={colors.primary.main} />
+            </TouchableOpacity>
+          </View>
+          <View style={styles.errorContainer}>
+            <Ionicons name="warning" size={32} color={colors.status.error} />
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity onPress={fetchWeatherData} style={styles.retryButton}>
+              <Text style={styles.retryButtonText}>Try Again</Text>
+            </TouchableOpacity>
+          </View>
         </View>
-        <View style={styles.errorContainer}>
-          <Ionicons name="warning" size={32} color={colors.status.error} />
-          <Text style={styles.errorText}>{error}</Text>
-          <TouchableOpacity onPress={fetchWeatherData} style={styles.retryButton}>
-            <Text style={styles.retryButtonText}>Try Again</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!weatherData) return null;
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
       <View style={styles.header}>
         <Ionicons name="partly-sunny" size={24} color={colors.primary.main} />
         <Text style={styles.title}>Weather Forecast</Text>
@@ -334,11 +342,15 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ destination, onRef
           </View>
         ))}
       </ScrollView>
-    </View>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+  },
   container: {
     backgroundColor: colors.surface.primary,
     borderRadius: borderRadius.lg,

@@ -9,7 +9,7 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, typography, spacing, borderRadius, shadows } from '../theme';
 import { databaseService, Trip, Activity } from '../services/database';
 import { CurrencyInput } from '../components/CurrencyInput';
@@ -31,6 +31,7 @@ interface ActivityManagementScreenProps {
 }
 
 export const ActivityManagementScreen = ({ trip, onClose, initialDay }: ActivityManagementScreenProps) => {
+  const insets = useSafeAreaInsets();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
@@ -470,8 +471,8 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
 
   return (
     <View style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.header}>
+      <View style={styles.safeArea}>
+        <View style={[styles.header, { paddingTop: Math.max(insets.top + spacing.md, spacing.lg) }]}>
           <TouchableOpacity style={styles.backButton} onPress={onClose}>
             <Text style={styles.backButtonText}>←</Text>
           </TouchableOpacity>
@@ -494,7 +495,7 @@ export const ActivityManagementScreen = ({ trip, onClose, initialDay }: Activity
             </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
+      </View>
 
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
         {nudge && (
@@ -1177,7 +1178,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
     paddingBottom: spacing.md,
   },
   backButton: { 
